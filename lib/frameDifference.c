@@ -57,8 +57,26 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 void *differenceTask(void *arg)
 {
+  /* get thread parameters */
+  if(arg == NULL) {
+    syslog(LOG_ERR, "invalid arg provided to %s", __func__);
+    return NULL;
+  }
+  threadParams_t threadParams = *(threadParams_t *)arg;
+
+  /* open handle to queue */
+  mqd_t msgQueue = mq_open(threadParams.msgQueueName,O_WRONLY, 0666, NULL);
+  if(msgQueue == -1) {
+    syslog(LOG_ERR, "%s couldn't open queue", __func__);
+    cout << __func__<< " couldn't open queue" << endl;
+    return NULL;
+  }
+
+  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
+  struct timespec startTime;
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
 	while(1) {
 
-		usleep(1);
+		sleep(1);
 	}
 }

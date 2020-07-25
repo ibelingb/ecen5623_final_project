@@ -61,7 +61,6 @@ void *acquisitionTask(void*arg)
   unsigned int prio = 30;
   Mat readImg;
   struct timespec expireTime;
-  struct timespec startTime;
 
   /* get thread parameters */
   if(arg == NULL) {
@@ -85,13 +84,14 @@ void *acquisitionTask(void*arg)
     cout << "couldn't open camera" << endl;
     return NULL;
   } else {
-    cam.set(CAP_PROP_FRAME_WIDTH, 640 / threadParams.decimateFactor);
-    cam.set(CAP_PROP_FRAME_HEIGHT, 480 / threadParams.decimateFactor);
+    cam.set(CAP_PROP_FRAME_WIDTH, 640);
+    cam.set(CAP_PROP_FRAME_HEIGHT, 480);
     cout  << "cam size (HxW): " << cam.get(CAP_PROP_FRAME_WIDTH)
           << " x " << cam.get(CAP_PROP_FRAME_HEIGHT) << endl;
   }
 
-  syslog(LOG_INFO, "%s started ...", __func__);
+  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
+  struct timespec startTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
   while(1) {
     /* read image from video */

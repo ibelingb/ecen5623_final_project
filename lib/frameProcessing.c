@@ -83,12 +83,14 @@ void *processingTask(void *arg)
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   Mat kern2D = kern1D * kern1D.t();
 
-  syslog(LOG_INFO, "%s started ...", __func__);
   float cumTime = 0.0f;
   float cumProcTime = 0.0f;
   const float deadline_ms = 70.0f;
   float cumJitter_ms;
-  clock_gettime(CLOCK_MONOTONIC, &prevTime);
+  
+  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
+  struct timespec startTime;
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
   while(1) {
     /* read oldest, highest priority msg from the message queue */
     if(mq_receive(msgQueue, (char *)&inputImg, MAX_MSG_SIZE, &prio) < 0) {
@@ -99,13 +101,12 @@ void *processingTask(void *arg)
     } else {
       /* process image */
       clock_gettime(CLOCK_MONOTONIC, &procTime);
-      if(threadParams.filterMethod == USE_GAUSSIAN_BLUR) {
+      if(threadParams.filter_enable) {
         GaussianBlur(inputImg, inputImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
-      } else if (threadParams.filterMethod == USE_FILTER_2D) {
         filter2D(inputImg, inputImg, CV_8U, kern2D);
-      } else {
         sepFilter2D(inputImg, inputImg, CV_8U, kern1D, kern1D);
       }
+
       clock_gettime(CLOCK_MONOTONIC, &readTime);
       if(cnt > 0) {
         cumProcTime += CALC_DT_MSEC(readTime, procTime);
@@ -123,11 +124,6 @@ void *processingTask(void *arg)
   syslog(LOG_INFO, "avg frame time: %f msec",cumTime / (cnt - 1));
   syslog(LOG_INFO, "avg proc time: %f msec", cumProcTime / (cnt - 1));
   syslog(LOG_INFO, "avg jitter: %f msec", cumJitter_ms / (cnt - 1));
-  
-  /* save am image for comparison later */
-  char filename[80];
-  sprintf(filename,"filt%d_Size%d.jpg",threadParams.filterMethod, threadParams.decimateFactor);
-  imwrite(filename, inputImg);
 
   syslog(LOG_INFO, "%s exiting", __func__);
   mq_close(msgQueue);

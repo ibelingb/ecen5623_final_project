@@ -57,8 +57,30 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 void *writeTask(void *arg)
 {
-	while(1) {
+  /* get thread parameters */
+  if(arg == NULL) {
+    syslog(LOG_ERR, "invalid arg provided to %s", __func__);
+    return NULL;
+  }
+  threadParams_t threadParams = *(threadParams_t *)arg;
 
-		usleep(1);
+  /* open handle to queue */
+  mqd_t msgQueue = mq_open(threadParams.msgQueueName,O_WRONLY, 0666, NULL);
+  if(msgQueue == -1) {
+    syslog(LOG_ERR, "%s couldn't open queue", __func__);
+    cout << __func__<< " couldn't open queue" << endl;
+    return NULL;
+  }
+
+  char filename[80];
+  Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
+
+  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
+  struct timespec startTime;
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
+	while(1) {
+    sprintf(filename,"filt%d_hough%d.jpg",threadParams.filter_enable, threadParams.hough_enable);
+    imwrite(filename, img);
+    sleep(10);
 	}
 }

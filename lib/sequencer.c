@@ -51,8 +51,18 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 void *sequencerTask(void *arg)
 {
+  /* get thread parameters */
+  if(arg == NULL) {
+    syslog(LOG_ERR, "invalid arg provided to %s", __func__);
+    return NULL;
+  }
+  threadParams_t threadParams = *(threadParams_t *)arg;
+
+  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
+  struct timespec startTime;
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
 	while(1) {
 
-		usleep(1);
+		sleep(1);
 	}
 }

@@ -64,6 +64,7 @@ using namespace std;
 int set_attr_policy(pthread_attr_t *attr, int policy, uint8_t priorityOffset);
 int set_main_policy(int policy, uint8_t priorityOffset);
 void print_scheduler(void);
+void usage(void);
 
 /*---------------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES */
@@ -76,7 +77,7 @@ int main(int argc, char *argv[])
 {
   /* starting logging; use cat /var/log/syslog | grep prob4
    * to view messages */
-  openlog("prob5", LOG_PID | LOG_NDELAY | LOG_CONS, LOG_USER);
+  openlog("project", LOG_PID | LOG_NDELAY | LOG_CONS, LOG_USER);
   syslog(LOG_INFO, ".");
   syslog(LOG_INFO, "..");
   syslog(LOG_INFO, "...");
@@ -84,12 +85,42 @@ int main(int argc, char *argv[])
 
   if (argc < 3) {
     syslog(LOG_ERR, "incorrect number of arguments provided");
-    cout  << "incorrect number of arguments provided\n\n"
-          << "Usage: prob5 [decimation factor] [filter type]\n"
-          << "decimation factor[0 = original size, 1 = half size, 2 = quarter size]\n"
-          << "filter type [0 = gaussionBlur(), 1 = filter2D(), 2 = sepFilter2D()\n";
+    cout  << "invalid parameter provided provided\n\n";
+    usage();
     return -1;
   }
+
+  /*---------------------------------------*/
+  /* parse CLI */
+  /*---------------------------------------*/
+  threadParams_t threadParams;
+
+  /* hough_enable */
+  if((strcmp(argv[1], "on") == 0) || (strcmp(argv[1], "ON") == 0) || (strcmp(argv[1], "On") == 0) || (strcmp(argv[1], "oN") == 0)) {
+    threadParams.hough_enable = 1;
+  } else if((strcmp(argv[1], "off") == 0) || (strcmp(argv[1], "OFF") == 0) || (strcmp(argv[1], "Off") == 0) || (strcmp(argv[1], "oFF") == 0) ||
+            (strcmp(argv[1], "oFf") == 0) || (strcmp(argv[1], "OfF") == 0) || (strcmp(argv[1], "OFf") == 0) || (strcmp(argv[1], "ofF") == 0)) {
+    threadParams.hough_enable = 0;
+  } else {
+    syslog(LOG_ERR, "invalid hough_enable provided");
+    cout  << "invalid 'filter_enable' parameter provided\n\n";
+    usage();
+    return -1;
+  }
+  /* filter_enable */
+  if((strcmp(argv[2], "on") == 0) || (strcmp(argv[1], "ON") == 0) || (strcmp(argv[1], "On") == 0) || (strcmp(argv[1], "oN") == 0)) {
+    threadParams.filter_enable = 1;
+  } else if((strcmp(argv[2], "off") == 0) || (strcmp(argv[2], "OFF") == 0) || (strcmp(argv[2], "Off") == 0) || (strcmp(argv[2], "oFF") == 0) ||
+            (strcmp(argv[2], "oFf") == 0) || (strcmp(argv[2], "OfF") == 0) || (strcmp(argv[2], "OFf") == 0) || (strcmp(argv[2], "ofF") == 0)) {
+    threadParams.filter_enable = 0;
+  } else {
+    syslog(LOG_ERR, "invalid filter_enable provided");
+    cout  << "invalid 'filter_enable' parameter provided\n\n";
+    usage();
+    return -1;
+  }
+  syslog(LOG_INFO, "hough_enable: %d", threadParams.hough_enable);
+  syslog(LOG_INFO, "filter_enable: %d", threadParams.filter_enable);
   
   /*---------------------------------------*/
   /* setup common message queue */
@@ -128,29 +159,7 @@ int main(int argc, char *argv[])
   /* create threads */
   /*---------------------------------------*/
   pthread_t threads[NUM_THREADS];
-  threadParams_t threadParams;
   strcpy(threadParams.msgQueueName, msgQueueName);
-  if((threadParams.decimateFactor = atoi(argv[1])) > 2) {
-    syslog(LOG_ERR, "invalid decimation factor provided");
-    cout  << "invalid decimation factor provided\n\n"
-          << "Usage: prob5 [decimation factor] [filter type]\n"
-          << "decimation factor[0 = original size, 1 = half size, 2 = quarter size]\n"
-          << "filter type [0 = gaussionBlur(), 1 = filter2D(), 2 = sepFilter2D()\n";
-    return -1;
-  } else {
-    threadParams.decimateFactor = pow(2.0, threadParams.decimateFactor);
-  }
-  if((threadParams.filterMethod = (FilterType_e)atoi(argv[2])) > 2) {
-    syslog(LOG_ERR, "invalid filter type provided");
-    cout  << "invalid filter type provided\n\n"
-          << "Usage: prob5 [decimation factor] [filter type]\n"
-          << "decimation factor[0 = original size, 1 = half size, 2 = quarter size]\n"
-          << "filter type [0 = gaussionBlur(), 1 = filter2D(), 2 = sepFilter2D()\n";
-    return -1;
-  }
-
-  syslog(LOG_INFO, "decimation factor: %d", threadParams.decimateFactor);
-  syslog(LOG_INFO, "filter type: %d", threadParams.filterMethod);
 
   threadParams.cameraIdx = 0;
   threadParams.threadIdx = READ_THEAD_NUM;
@@ -177,6 +186,13 @@ int main(int argc, char *argv[])
   closelog();
   mq_unlink(msgQueueName);
   mq_close(mymq);
+}
+
+void usage(void) 
+{
+  cout  << "Usage: sudo ./project [hough_enable] [filter_enable]\n"
+        << "sudo ./project on on\n"
+        << "sudo ./project off off\n";
 }
 
 void print_scheduler(void)
