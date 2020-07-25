@@ -48,12 +48,12 @@ using namespace std;
 #include "frameProcessing.h"
 #include "frameWrite.h"
 #include "sequencer.h"
-#include "types.h"
+#include "project.h"
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
 #define NUM_THREADS         	        (2)
-#define MAX_MSG_SIZE                  (sizeof(cv::Mat))
+
 #define ERROR                         (-1)
 #define READ_THEAD_NUM 			          (0)
 #define PROC_THEAD_NUM 			          (READ_THEAD_NUM + 1)
@@ -203,8 +203,6 @@ void print_scheduler(void)
 
 int set_attr_policy(pthread_attr_t *attr, int policy, uint8_t priorityOffset)
 {
-  int max_prio;
-  int min_prio;
   struct sched_param param;
   int rtnCode = 0;
 
@@ -241,10 +239,7 @@ int set_attr_policy(pthread_attr_t *attr, int policy, uint8_t priorityOffset)
 int set_main_policy(int policy, uint8_t priorityOffset)
 {
   int rtnCode;
-  int max_prio;
-  int min_prio;
   struct sched_param param;
-  pthread_attr_t attr;
 
   if(policy < 0) {
     printf("ERROR: invalid policy #: %d\n", policy);

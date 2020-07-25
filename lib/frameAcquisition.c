@@ -42,6 +42,9 @@
 using namespace cv;
 using namespace std;
 
+/* project headers */
+#include "project.h"
+
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
 
@@ -107,7 +110,6 @@ void *acquisitionTask(void*arg)
       ++cnt;
     }
   }
-  gAbortTest = 1;
   syslog(LOG_INFO, "%s exiting", __func__);
   mq_close(msgQueue);
   return NULL;

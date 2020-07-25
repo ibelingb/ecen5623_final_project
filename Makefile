@@ -14,9 +14,9 @@
 # General / default variables for all platforms / architectures
 CFLAGS = -Wall -g -O0 -Werror -pthread
 CPPFLAGS = -MD -MP
-TARGET = main
+TARGET = project
 PLATFORM = UBUNTU
-LDFLAGS = -L/usr/lib -lopencv_core -lopencv_flann -lopencv_video -lpthread -lrt
+LDFLAGS = -lopencv_core -lopencv_flann -lopencv_video -lpthread -lrt
 include mk_files/$(TARGET).mk
 INCLDS = -I./include
 
@@ -73,7 +73,7 @@ build: $(TARGET)
 run: build
 ifeq ($(PLATFORM),BBG)
 	scp $(TARGET) root@10.0.0.87:/usr/bin/$(TARGET)
-	ssh -t root@10.0.0.87 "cd /usr/bin/ && gdbserver localhost:6666 main"
+	ssh -t root@10.0.0.87 "cd /usr/bin/ && gdbserver localhost:6666 project"
 endif
 
 .PHONY: all
@@ -81,7 +81,7 @@ all: run
 	
 $(TARGET): $(OBJS)
 	@echo PLATFORM = $(PLATFORM)
-	@$(CC) $(CPPFLAGS) $(CFLAGS) -o $(TARGET) $^ $(LDFLAGS)
+	@$(CC) $(CPPFLAGS) $(CFLAGS) -o $(TARGET) $^ `pkg-config --libs opencv` $(LDFLAGS)
 	@echo build complete
 	@$(SZ) -Bx $(TARGET)
 	@echo

@@ -16,7 +16,7 @@ SRCS += main/project.c \
 				lib/frameAcquisition.c \
 				lib/frameDifference.c \
 				lib/frameProcessing.c \
-				lib/frameWriter.c \
+				lib/frameWrite.c \
 				lib/sequencer.c
 
 PLATFORM = UBUNTU

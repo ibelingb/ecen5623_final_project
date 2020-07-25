@@ -31,6 +31,7 @@
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
+#include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>  // OpenCV window I/O
 
@@ -42,8 +43,13 @@
 using namespace cv;
 using namespace std;
 
+/* project headers */
+#include "project.h"
+
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
+#define FILTER_SIZE   (31)
+#define FILTER_SIGMA  (2.0)
 
 /*---------------------------------------------------------------------------------*/
 /* PRIVATE FUNCTIONS */
@@ -56,8 +62,6 @@ void *processingTask(void *arg)
 {
   Mat inputImg;
   unsigned int prio;
-  int nbytes;
-  int id;
   struct timespec prevTime, readTime, procTime;
   int cnt = 0;
   
@@ -83,10 +87,9 @@ void *processingTask(void *arg)
   float cumTime = 0.0f;
   float cumProcTime = 0.0f;
   const float deadline_ms = 70.0f;
-  float maxJitter_ms = 0.0f;
   float cumJitter_ms;
   clock_gettime(CLOCK_MONOTONIC, &prevTime);
-  while(!gAbortTest) {
+  while(1) {
     /* read oldest, highest priority msg from the message queue */
     if(mq_receive(msgQueue, (char *)&inputImg, MAX_MSG_SIZE, &prio) < 0) {
       /* don't print if queue was empty */

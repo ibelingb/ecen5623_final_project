@@ -8,7 +8,7 @@
  * Ubuntu 18.04 LTS and RPi 3B+
  ************************************************************************************
  *
- * @file project_types.h
+ * @file project.h
  * @brief 
  *
  ************************************************************************************
@@ -22,6 +22,7 @@
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
 
+#define MAX_MSG_SIZE                  (sizeof(cv::Mat))
 #define TIMESPEC_TO_MSEC(time)	      ((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6))
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
 

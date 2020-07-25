@@ -36,6 +36,9 @@
 
 using namespace std;
 
+/* project headers */
+#include "project.h"
+
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
 
