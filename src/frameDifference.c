@@ -31,7 +31,7 @@
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
-#include <opencv2/videoio.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>  // OpenCV window I/O
 
 #include <iostream> // for standard I/O
@@ -72,6 +72,11 @@ void *differenceTask(void *arg)
     return NULL;
   }
 
+  if(threadParams.pCBuff == NULL) {
+    syslog(LOG_ERR, "invalid circular buffer provided to %s", __func__);
+    return NULL;
+  }
+
   /* open handle to queue */
   mqd_t selectQueue = mq_open(threadParams.selectQueueName,O_WRONLY, 0666, NULL);
   if(selectQueue == -1) {
@@ -79,36 +84,60 @@ void *differenceTask(void *arg)
     cout << __func__<< " couldn't open queue" << endl;
     return NULL;
   }
-
   
   struct timespec startTime, sendTime, expireTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
-  Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  Mat prevFrame;
+  Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
 	while(1) {
-    /*todo: cycle through circular buffer */
 
-    /*todo: find difference */
-
-    /* try to insert image but don't block if full
-     * so that we loop around and just get the newest */
-    clock_gettime(CLOCK_MONOTONIC, &expireTime);
-    if(mq_timedsend(selectQueue, (const char *)&img, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
-      /* don't print if queue was empty */
-      if(errno != ETIMEDOUT) {
-        syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));
-      }
-      cout << __func__ << " error with mq_send, errno: " << errno << " [" << strerror(errno) << "]" << endl;
-    } else {
-      clock_gettime(CLOCK_MONOTONIC, &sendTime);
-      syslog(LOG_INFO, "%s sent image#%d at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
-      ++cnt;
+    /* if this is the first time through, fill previous frame */
+    if(prevFrame.empty() && threadParams.pCBuff->capacity() > 0) {
+      prevFrame = threadParams.pCBuff->get();
+      cvtColor(prevFrame, prevFrame, COLOR_RGB2GRAY);
     }
 
+    /* continue as long as there's frames in buffer */
+    while(threadParams.pCBuff->capacity() > 0)
+    {
+      Mat nextFrame = threadParams.pCBuff->get();
+      cvtColor(nextFrame, nextFrame, COLOR_RGB2GRAY);
+
+      /* find difference */
+      Mat diffFrame = nextFrame - prevFrame;
+      
+      /* convert to binary */
+      Mat bw;
+      threshold(diffFrame, bw, 50, 255, THRESH_BINARY);
+
+      /* if difference detected, send for processing */
+      if(countNonZero(bw) > 10) {
+        imshow("diff", diffFrame);
+        waitKey();
+        /* try to insert image but don't block if full
+        * so that we loop around and just get the newest */
+        clock_gettime(CLOCK_MONOTONIC, &expireTime);
+        if(mq_timedsend(selectQueue, (const char *)&nextFrame, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
+          /* don't print if queue was empty */
+          if(errno != ETIMEDOUT) {
+            syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));
+          }
+          cout << __func__ << " error with mq_send, errno: " << errno << " [" << strerror(errno) << "]" << endl;
+        } else {
+          clock_gettime(CLOCK_MONOTONIC, &sendTime);
+          syslog(LOG_INFO, "%s sent image#%d at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+          ++cnt;
+        }
+      }
+
+      /* store old frame */
+      nextFrame.copyTo(prevFrame);
+    }
 		sleep(1);
 	}
   mq_close(selectQueue);
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

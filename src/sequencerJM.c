@@ -58,14 +58,20 @@ void *sequencerTask(void *arg)
   }
   threadParams_t threadParams = *(threadParams_t *)arg;
 
+  /* Note: just putting this here to suppress unused variable error */
+  if(threadParams.pCBuff == NULL) {
+    syslog(LOG_ERR, "invalid circular buffer provided to %s", __func__);
+    return NULL;
+  }
+
   struct timespec startTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 	while(1) {
 
 		sleep(1);
 	}
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

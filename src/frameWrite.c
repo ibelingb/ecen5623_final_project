@@ -77,7 +77,7 @@ void *writeTask(void *arg)
 
   struct timespec startTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 	while(1) {
     sprintf(filename,"filt%d_hough%d.jpg",threadParams.filter_enable, threadParams.hough_enable);
     imwrite(filename, img);
@@ -85,6 +85,6 @@ void *writeTask(void *arg)
 	}
   mq_close(writeQueue);
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

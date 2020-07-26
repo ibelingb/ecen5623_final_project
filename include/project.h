@@ -39,21 +39,22 @@
 
 
 typedef enum {
-  USE_GAUSSIAN_BLUR,
-  USE_FILTER_2D,
-  USE_SEP_FILTER_2D
-} FilterType_e;
+  ACQ_THREAD = 0,
+  DIFF_THREAD = 1,
+  WRITE_THREAD = 2,
+  SEQ_THREAD = 3,
+  TOTAL_THREADS = 4
+} Thread_e;
 
 typedef struct {
-  int threadIdx;                      /* thread id */
-  int cameraIdx;                      /* index of camera */
-  sem_t *pSema;                       /* semaphore */
-  char selectQueueName[64];           /* message queue */
-  char writeQueueName[64];            /* message queue */
-  pthread_mutex_t *pBuffMutex;        /* image circular buffer queue */
-  circular_buffer<cv::Mat> *pCBuff;   /* circular buffer pointer */
-  unsigned int hough_enable;          /* enable hough transformations */
-  unsigned int filter_enable;         /* enable filtering */
+  int cameraIdx;                              /* index of camera */
+  sem_t *pSema;                               /* semaphore */
+  char selectQueueName[64];                   /* message queue */
+  char writeQueueName[64];                    /* message queue */
+  pthread_mutex_t *pBuffMutex;                /* image circular buffer queue */
+  circular_buffer<cv::Mat> *pCBuff;           /* circular buffer pointer */
+  unsigned int hough_enable;                  /* enable hough transformations */
+  unsigned int filter_enable;                 /* enable filtering */
 } threadParams_t;
 
 #endif

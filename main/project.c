@@ -50,11 +50,7 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
-#define NUM_THREADS         	        (2)
-
-#define ERROR                         (-1)
-#define READ_THEAD_NUM 			          (0)
-#define PROC_THEAD_NUM 			          (READ_THEAD_NUM + 1)
+#define ERROR   (-1)
 
 /*---------------------------------------------------------------------------------*/
 /* PRIVATE FUNCTIONS */
@@ -80,7 +76,9 @@ int main(int argc, char *argv[])
   syslog(LOG_INFO, ".");
   syslog(LOG_INFO, "..");
   syslog(LOG_INFO, "...");
-  syslog(LOG_INFO, "logging started");
+  struct timespec startTime;
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 
   if (argc < 3) {
     syslog(LOG_ERR, "incorrect number of arguments provided");
@@ -118,8 +116,13 @@ int main(int argc, char *argv[])
     usage();
     return -1;
   }
+  
+  /* todo: get from CLI */
+  threadParams.cameraIdx = 0;
+
   syslog(LOG_INFO, "hough_enable: %d", threadParams.hough_enable);
   syslog(LOG_INFO, "filter_enable: %d", threadParams.filter_enable);
+  syslog(LOG_INFO, "cam_index: %d", threadParams.cameraIdx);
   
   /*---------------------------------------*/
   /* setup select message queue */
@@ -128,11 +131,6 @@ int main(int argc, char *argv[])
   /* ensure MQs properly cleaned up before starting */
   mq_unlink(selectQueueName);
   if(remove(selectQueueName) == -1 && errno != ENOENT) {
-    syslog(LOG_ERR, "couldn't clean queue");
-    return -1;
-  }
-  mq_unlink(writeQueueName);
-  if(remove(writeQueueName) == -1 && errno != ENOENT) {
     syslog(LOG_ERR, "couldn't clean queue");
     return -1;
   }
@@ -198,29 +196,26 @@ int main(int argc, char *argv[])
   /*---------------------------------------*/
   /* create threads */
   /*---------------------------------------*/
-  pthread_t threads[NUM_THREADS];
+  pthread_t threads[TOTAL_THREADS];
   strcpy(threadParams.selectQueueName, selectQueueName);
   strcpy(threadParams.writeQueueName, writeQueueName);
 
-  threadParams.cameraIdx = 0;
-  threadParams.threadIdx = READ_THEAD_NUM;
-  if(pthread_create(&threads[READ_THEAD_NUM], &thread_attr, acquisitionTask, (void *)&threadParams) != 0) {
-    syslog(LOG_ERR, "couldn't create thread#%d", READ_THEAD_NUM);
+  if(pthread_create(&threads[ACQ_THREAD], &thread_attr, acquisitionTask, (void *)&threadParams) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", ACQ_THREAD);
   }
 
-  threadParams.threadIdx = PROC_THEAD_NUM;
-  if(pthread_create(&threads[PROC_THEAD_NUM], &thread_attr, processingTask, (void *)&threadParams) != 0) {
-    syslog(LOG_ERR, "couldn't create thread#%d", PROC_THEAD_NUM);
+  if(pthread_create(&threads[DIFF_THREAD], &thread_attr, processingTask, (void *)&threadParams) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", DIFF_THREAD);
   }
 
   /*----------------------------------------------*/
   /* exiting */
   /*----------------------------------------------*/
   syslog(LOG_INFO, "%s waiting on threads...", __func__);
-  for(uint8_t ind = 0; ind < NUM_THREADS; ++ind) {
+  for(uint8_t ind = 0; ind < TOTAL_THREADS; ++ind) {
     pthread_join(threads[ind], NULL);
   }
-  syslog(LOG_INFO, "%s exiting, stopping log", __func__);
+syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   syslog(LOG_INFO, "...");
   syslog(LOG_INFO, "..");
   syslog(LOG_INFO, ".");

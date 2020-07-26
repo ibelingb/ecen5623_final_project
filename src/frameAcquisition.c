@@ -31,7 +31,6 @@
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
-#include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>  // OpenCV window I/O
 
 #include <iostream>             // for standard I/O
@@ -72,6 +71,10 @@ void *acquisitionTask(void*arg)
     syslog(LOG_ERR, "invalid mutex provided to %s", __func__);
     return NULL;
   }
+  if(threadParams.pCBuff == NULL) {
+    syslog(LOG_ERR, "invalid circular buffer provided to %s", __func__);
+    return NULL;
+  }
 
   /* open camera stream */
   VideoCapture cam;
@@ -88,15 +91,19 @@ void *acquisitionTask(void*arg)
 
   struct timespec startTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   while(1) {
     /* read image from video */
     cam >> readImg;
     clock_gettime(CLOCK_MONOTONIC, &readTime);
 
-    /* todo: insert in circular buffer */
+    /* insert in circular buffer */
+    threadParams.pCBuff->put(readImg);
+    if(threadParams.pCBuff->full()) {
+      syslog(LOG_WARNING, "circular buffer full");
+    }
   }
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

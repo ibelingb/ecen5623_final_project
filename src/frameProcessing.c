@@ -98,7 +98,7 @@ void *processingTask(void *arg)
   
   struct timespec startTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   while(1) {
     /* read oldest, highest priority msg from the message queue */
     if(mq_receive(selectQueue, (char *)&inputImg, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
@@ -136,6 +136,6 @@ void *processingTask(void *arg)
   mq_close(selectQueue);
   mq_close(writeQueue);
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

@@ -46,9 +46,7 @@ public:
 		{
 			tail_ = (tail_ + 1) % max_size_;
 		}
-
 		head_ = (head_ + 1) % max_size_;
-
 		full_ = head_ == tail_;
 	}
 
@@ -60,11 +58,24 @@ public:
 			return T();
 		}
 
-		//Read data and advance the tail (we now have a free space)
+		// Read data and advance the tail (we now have a free space)
 		auto val = buf_[tail_];
 		full_ = false;
 		tail_ = (tail_ + 1) % max_size_;
 
+		return val;
+	}
+
+  T peek()
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+
+		if(empty()) {
+			return T();
+		}
+
+		// Read data and DO NOT advance the tail
+		auto val = buf_[tail_];
 		return val;
 	}
 
