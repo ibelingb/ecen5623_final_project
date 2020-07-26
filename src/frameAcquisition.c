@@ -93,7 +93,7 @@ void *acquisitionTask(void*arg)
   while(1) {
     /* wait for semaphore */
     clock_gettime(CLOCK_REALTIME, &readTime);
-    readTime.tv_nsec += 50*1e6;
+    readTime.tv_nsec += ACQ_THREAD_SEMA_TIMEOUT;
     if(readTime.tv_nsec  > 1e9) {
       readTime.tv_sec += 1;
       readTime.tv_nsec -= 1e9;

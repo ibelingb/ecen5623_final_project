@@ -59,12 +59,7 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 void *processingTask(void *arg)
-{
-  Mat inputImg;
-  unsigned int prio;
-  struct timespec prevTime, readTime, procTime;
-  int cnt = 0;
-  
+{  
   /* get thread parameters */
   if(arg == NULL) {
     syslog(LOG_ERR, "ERROR: invalid arg provided to %s", __func__);
@@ -95,20 +90,17 @@ void *processingTask(void *arg)
 
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   Mat kern2D = kern1D * kern1D.t();
-
-  float cumTime = 0.0f;
-  float cumProcTime = 0.0f;
-  const float deadline_ms = 70.0f;
-  float cumJitter_ms;
   
   struct timespec startTime;
+  Mat inputImg;
+  unsigned int prio;
   clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &readTime);
-    readTime.tv_sec += 1;
-    if(sem_timedwait(threadParams.pSema, &readTime) < 0) {
+    clock_gettime(CLOCK_REALTIME, &startTime);
+    startTime.tv_sec += ACQ_THREAD_SEMA_TIMEOUT;
+    if(sem_timedwait(threadParams.pSema, &startTime) < 0) {
       if(errno != ETIMEDOUT) {
         syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
       } else {
@@ -124,30 +116,14 @@ void *processingTask(void *arg)
       }
     } else {
       /* process image */
-      clock_gettime(CLOCK_REALTIME, &procTime);
+      syslog(LOG_INFO, "%s processing image", __func__);
       if(threadParams.filter_enable) {
         GaussianBlur(inputImg, inputImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
         filter2D(inputImg, inputImg, CV_8U, kern2D);
         sepFilter2D(inputImg, inputImg, CV_8U, kern1D, kern1D);
       }
-
-      clock_gettime(CLOCK_REALTIME, &readTime);
-      if(cnt > 0) {
-        cumProcTime += CALC_DT_MSEC(readTime, procTime);
-        cumTime += CALC_DT_MSEC(readTime, prevTime);
-        cumJitter_ms += deadline_ms - CALC_DT_MSEC(readTime, prevTime);
-        if (CALC_DT_MSEC(readTime, prevTime) > deadline_ms) {
-          syslog(LOG_ERR, "deadline missed: %f", CALC_DT_MSEC(readTime, prevTime));
-        }
-      }
-      ++cnt;
-      prevTime = readTime;
     }
   }
-  /* ignore first frame */
-  syslog(LOG_INFO, "avg frame time: %f msec",cumTime / (cnt - 1));
-  syslog(LOG_INFO, "avg proc time: %f msec", cumProcTime / (cnt - 1));
-  syslog(LOG_INFO, "avg jitter: %f msec", cumJitter_ms / (cnt - 1));
 
   mq_close(selectQueue);
   mq_close(writeQueue);

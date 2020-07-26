@@ -90,14 +90,17 @@ int main(int argc, char *argv[])
   /*---------------------------------------*/
   /* parse CLI */
   /*---------------------------------------*/
-  threadParams_t threadParams;
+  threadParams_t threadParams[TOTAL_THREADS];
+  for(int ind = 0; ind < TOTAL_THREADS; ++ind) {
+    memset(&threadParams[ind], 0, sizeof(threadParams_t));
+  }
 
   /* hough_enable */
   if((strcmp(argv[1], "on") == 0) || (strcmp(argv[1], "ON") == 0) || (strcmp(argv[1], "On") == 0) || (strcmp(argv[1], "oN") == 0)) {
-    threadParams.hough_enable = 1;
+    threadParams[Thread_e::PROC_THREAD].hough_enable = 1;
   } else if((strcmp(argv[1], "off") == 0) || (strcmp(argv[1], "OFF") == 0) || (strcmp(argv[1], "Off") == 0) || (strcmp(argv[1], "oFF") == 0) ||
             (strcmp(argv[1], "oFf") == 0) || (strcmp(argv[1], "OfF") == 0) || (strcmp(argv[1], "OFf") == 0) || (strcmp(argv[1], "ofF") == 0)) {
-    threadParams.hough_enable = 0;
+    threadParams[Thread_e::PROC_THREAD].hough_enable = 0;
   } else {
     syslog(LOG_ERR, "invalid hough_enable provided");
     cout  << "invalid 'filter_enable' parameter provided\n\n";
@@ -106,10 +109,10 @@ int main(int argc, char *argv[])
   }
   /* filter_enable */
   if((strcmp(argv[2], "on") == 0) || (strcmp(argv[1], "ON") == 0) || (strcmp(argv[1], "On") == 0) || (strcmp(argv[1], "oN") == 0)) {
-    threadParams.filter_enable = 1;
+    threadParams[Thread_e::PROC_THREAD].filter_enable = 1;
   } else if((strcmp(argv[2], "off") == 0) || (strcmp(argv[2], "OFF") == 0) || (strcmp(argv[2], "Off") == 0) || (strcmp(argv[2], "oFF") == 0) ||
             (strcmp(argv[2], "oFf") == 0) || (strcmp(argv[2], "OfF") == 0) || (strcmp(argv[2], "OFf") == 0) || (strcmp(argv[2], "ofF") == 0)) {
-    threadParams.filter_enable = 0;
+    threadParams[Thread_e::PROC_THREAD].filter_enable = 0;
   } else {
     syslog(LOG_ERR, "invalid filter_enable provided");
     cout  << "invalid 'filter_enable' parameter provided\n\n";
@@ -118,11 +121,11 @@ int main(int argc, char *argv[])
   }
   
   /* todo: get from CLI */
-  threadParams.cameraIdx = 0;
+  threadParams[Thread_e::ACQ_THREAD].cameraIdx = 0;
 
-  syslog(LOG_INFO, "hough_enable: %d", threadParams.hough_enable);
-  syslog(LOG_INFO, "filter_enable: %d", threadParams.filter_enable);
-  syslog(LOG_INFO, "cam_index: %d", threadParams.cameraIdx);
+  syslog(LOG_INFO, "hough_enable: %d", threadParams[Thread_e::PROC_THREAD].hough_enable);
+  syslog(LOG_INFO, "filter_enable: %d", threadParams[Thread_e::PROC_THREAD].filter_enable);
+  syslog(LOG_INFO, "cam_index: %d", threadParams[Thread_e::ACQ_THREAD].cameraIdx);
   
   /*---------------------------------------*/
   /* setup select message queue */
@@ -175,7 +178,8 @@ int main(int argc, char *argv[])
   /* create circular buffer */
   /*---------------------------------------*/
   circular_buffer<cv::Mat> imgBuff(CIRCULAR_BUFF_LEN);
-  threadParams.pCBuff = &imgBuff;
+  threadParams[Thread_e::DIFF_THREAD].pCBuff = &imgBuff;
+  threadParams[Thread_e::ACQ_THREAD].pCBuff = &imgBuff;
 
   /*---------------------------------------*/
   /* create synchronization mechanizisms */
@@ -195,37 +199,37 @@ int main(int argc, char *argv[])
   set_main_policy(SCHED_FIFO, 0);
   print_scheduler();
   pthread_attr_t thread_attr;
-  set_attr_policy(&thread_attr, SCHED_FIFO, 0);
+  set_attr_policy(&thread_attr, SCHED_FIFO, 1);
 
   /*---------------------------------------*/
   /* create threads */
   /*---------------------------------------*/
-  strcpy(threadParams.selectQueueName, selectQueueName);
-  strcpy(threadParams.writeQueueName, writeQueueName);
+  strcpy(threadParams[Thread_e::DIFF_THREAD].selectQueueName, selectQueueName);
+  strcpy(threadParams[Thread_e::PROC_THREAD].selectQueueName, selectQueueName);
+  strcpy(threadParams[Thread_e::PROC_THREAD].writeQueueName, writeQueueName);
+  strcpy(threadParams[Thread_e::WRITE_THREAD].writeQueueName, writeQueueName);
 
   pthread_t threads[TOTAL_THREADS];
-  threadParams.pSema = &semas[ACQ_THREAD];
-  if(pthread_create(&threads[ACQ_THREAD], &thread_attr, acquisitionTask, (void *)&threadParams) != 0) {
-    syslog(LOG_ERR, "couldn't create thread#%d", ACQ_THREAD);
+  threadParams[Thread_e::ACQ_THREAD].pSema = &semas[Thread_e::ACQ_THREAD];
+  if(pthread_create(&threads[Thread_e::ACQ_THREAD], &thread_attr, acquisitionTask, (void *)&threadParams[Thread_e::ACQ_THREAD]) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::ACQ_THREAD);
   }
 
-  threadParams.pSema = &semas[DIFF_THREAD];
-  if(pthread_create(&threads[DIFF_THREAD], &thread_attr, differenceTask, (void *)&threadParams) != 0) {
-    syslog(LOG_ERR, "couldn't create thread#%d", DIFF_THREAD);
+  threadParams[Thread_e::DIFF_THREAD].pSema = &semas[Thread_e::DIFF_THREAD];
+  if(pthread_create(&threads[Thread_e::DIFF_THREAD], &thread_attr, differenceTask, (void *)&threadParams[Thread_e::DIFF_THREAD]) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::DIFF_THREAD);
   }
 
-  threadParams.pSema = &semas[PROC_THREAD];
-  if(pthread_create(&threads[PROC_THREAD], &thread_attr, processingTask, (void *)&threadParams) != 0) {
-    syslog(LOG_ERR, "couldn't create thread#%d", PROC_THREAD);
+  threadParams[Thread_e::PROC_THREAD].pSema = &semas[Thread_e::PROC_THREAD];
+  if(pthread_create(&threads[Thread_e::PROC_THREAD], &thread_attr, processingTask, (void *)&threadParams[Thread_e::PROC_THREAD]) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::PROC_THREAD);
   }
 
-  threadParams.pSema = NULL;
-  if(pthread_create(&threads[WRITE_THREAD], &thread_attr, writeTask, (void *)&threadParams) != 0) {
+  if(pthread_create(&threads[WRITE_THREAD], NULL, writeTask, (void *)&threadParams[Thread_e::WRITE_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", WRITE_THREAD);
   }
 
-  threadParams.pSema = NULL;
-  if(pthread_create(&threads[SEQ_THREAD], &thread_attr, sequencerTask, (void *)&threadParams) != 0) {
+  if(pthread_create(&threads[SEQ_THREAD], &thread_attr, sequencerTask, (void *)&threadParams[Thread_e::SEQ_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", SEQ_THREAD);
   }
 

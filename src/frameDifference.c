@@ -92,8 +92,8 @@ void *differenceTask(void *arg)
 	while(1) {
     /* wait for semaphore */
     clock_gettime(CLOCK_REALTIME, &expireTime);
-    expireTime.tv_nsec += 50e6;
-    if(expireTime.tv_nsec  > 1e9) {
+    expireTime.tv_nsec += ACQ_THREAD_SEMA_TIMEOUT;
+    if(expireTime.tv_nsec > 1e9) {
       expireTime.tv_sec += 1;
       expireTime.tv_nsec -= 1e9;
     }

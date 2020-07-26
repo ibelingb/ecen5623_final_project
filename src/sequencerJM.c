@@ -60,8 +60,7 @@ void *sequencerTask(void *arg)
 
   /* Note: just putting this here to suppress unused variable error */
   if(threadParams.pCBuff == NULL) {
-    syslog(LOG_ERR, "invalid circular buffer provided to %s", __func__);
-    return NULL;
+    syslog(LOG_ERR, "invalid circular buffer provided to %s .. this is good", __func__);
   }
 
   struct timespec startTime;

@@ -31,12 +31,17 @@
 #define TIMESPEC_TO_MSEC(time)	      ((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6))
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
 
+/* for queues */
 #define SELECT_QUEUE_MSG_SIZE         (sizeof(cv::Mat))
-#define SELECT_QUEUE_LENGTH           (10)
+#define SELECT_QUEUE_LENGTH           (2)
 #define WRITE_QUEUE_MSG_SIZE          (sizeof(cv::Mat))
 #define WRITE_QUEUE_LENGTH            (10)
-#define CIRCULAR_BUFF_LEN             (25)
+#define CIRCULAR_BUFF_LEN             (13)
 
+/* for synchronization */
+#define ACQ_THREAD_SEMA_TIMEOUT       (50e6)
+#define DIFF_THREAD_SEMA_TIMEOUT      (500e6)
+#define PROC_THREAD_SEMA_TIMEOUT      (1000e6)
 
 typedef enum {
   ACQ_THREAD = 0,
@@ -46,7 +51,7 @@ typedef enum {
   SEQ_THREAD,
   TOTAL_THREADS
 } Thread_e;
-#define TOTAL_RT_THREADS  ((unsigned int)TOTAL_THREADS - 2)
+#define TOTAL_RT_THREADS  (TOTAL_THREADS - 2)
 
 typedef struct {
   int cameraIdx;                              /* index of camera */
