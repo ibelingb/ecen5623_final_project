@@ -73,8 +73,16 @@ void *processingTask(void *arg)
   threadParams_t threadParams = *(threadParams_t *)arg;
 
   /* open handle to queue */
-  mqd_t msgQueue = mq_open(threadParams.msgQueueName, O_RDONLY, 0666, NULL);
-  if(msgQueue == -1) {
+  mqd_t selectQueue = mq_open(threadParams.selectQueueName, O_RDONLY, 0666, NULL);
+  if(selectQueue == -1) {
+    syslog(LOG_ERR, "%s couldn't open queue", __func__);
+    cout << __func__<< " couldn't open queue" << endl;
+    return NULL;
+  }
+
+  /* open handle to queue */
+  mqd_t writeQueue = mq_open(threadParams.writeQueueName, O_RDONLY, 0666, NULL);
+  if(writeQueue == -1) {
     syslog(LOG_ERR, "%s couldn't open queue", __func__);
     cout << __func__<< " couldn't open queue" << endl;
     return NULL;
@@ -88,12 +96,12 @@ void *processingTask(void *arg)
   const float deadline_ms = 70.0f;
   float cumJitter_ms;
   
-  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
   struct timespec startTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
   while(1) {
     /* read oldest, highest priority msg from the message queue */
-    if(mq_receive(msgQueue, (char *)&inputImg, MAX_MSG_SIZE, &prio) < 0) {
+    if(mq_receive(selectQueue, (char *)&inputImg, MAX_MSG_SIZE, &prio) < 0) {
       /* don't print if queue was empty */
       if(errno != EAGAIN) {
         syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
@@ -125,7 +133,9 @@ void *processingTask(void *arg)
   syslog(LOG_INFO, "avg proc time: %f msec", cumProcTime / (cnt - 1));
   syslog(LOG_INFO, "avg jitter: %f msec", cumJitter_ms / (cnt - 1));
 
-  syslog(LOG_INFO, "%s exiting", __func__);
-  mq_close(msgQueue);
+  mq_close(selectQueue);
+  mq_close(writeQueue);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

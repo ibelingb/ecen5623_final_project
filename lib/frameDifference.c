@@ -57,6 +57,9 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 void *differenceTask(void *arg)
 {
+  unsigned int cnt = 0;
+  unsigned int prio = 30;
+
   /* get thread parameters */
   if(arg == NULL) {
     syslog(LOG_ERR, "invalid arg provided to %s", __func__);
@@ -64,19 +67,45 @@ void *differenceTask(void *arg)
   }
   threadParams_t threadParams = *(threadParams_t *)arg;
 
+  if(threadParams.pBuffMutex == NULL) {
+    syslog(LOG_ERR, "invalid mutex provided to %s", __func__);
+    return NULL;
+  }
+
   /* open handle to queue */
-  mqd_t msgQueue = mq_open(threadParams.msgQueueName,O_WRONLY, 0666, NULL);
-  if(msgQueue == -1) {
+  mqd_t selectQueue = mq_open(threadParams.selectQueueName,O_WRONLY, 0666, NULL);
+  if(selectQueue == -1) {
     syslog(LOG_ERR, "%s couldn't open queue", __func__);
     cout << __func__<< " couldn't open queue" << endl;
     return NULL;
   }
 
-  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
-  struct timespec startTime;
+  
+  struct timespec startTime, sendTime, expireTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
 	while(1) {
+
+    /* try to insert image but don't block if full
+     * so that we loop around and just get the newest */
+    clock_gettime(CLOCK_MONOTONIC, &expireTime);
+    if(mq_timedsend(selectQueue, (const char *)&img, MAX_MSG_SIZE, prio, &expireTime) != 0) {
+      /* don't print if queue was empty */
+      if(errno != ETIMEDOUT) {
+        syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));
+      }
+      cout << __func__ << " error with mq_send, errno: " << errno << " [" << strerror(errno) << "]" << endl;
+    } else {
+      clock_gettime(CLOCK_MONOTONIC, &sendTime);
+      syslog(LOG_INFO, "%s sent image#%d at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+      ++cnt;
+    }
 
 		sleep(1);
 	}
+  mq_close(selectQueue);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  return NULL;
 }

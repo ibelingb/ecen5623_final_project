@@ -69,13 +69,14 @@ void usage(void);
 /*---------------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES */
 int gAbortTest = 0;
-const char *msgQueueName = "/image_mq";
+const char *selectQueueName = "/image_mq";
+const char *writeQueueName = "/write_mq";
 
 /*---------------------------------------------------------------------------------*/
 
 int main(int argc, char *argv[])
 {
-  /* starting logging; use cat /var/log/syslog | grep prob4
+  /* starting logging; use cat /var/log/syslog | grep project
    * to view messages */
   openlog("project", LOG_PID | LOG_NDELAY | LOG_CONS, LOG_USER);
   syslog(LOG_INFO, ".");
@@ -123,28 +124,64 @@ int main(int argc, char *argv[])
   syslog(LOG_INFO, "filter_enable: %d", threadParams.filter_enable);
   
   /*---------------------------------------*/
-  /* setup common message queue */
+  /* setup select message queue */
   /*---------------------------------------*/
 
   /* ensure MQs properly cleaned up before starting */
-  mq_unlink(msgQueueName);
-  if(remove(msgQueueName) == -1 && errno != ENOENT) {
+  mq_unlink(selectQueueName);
+  if(remove(selectQueueName) == -1 && errno != ENOENT) {
+    syslog(LOG_ERR, "couldn't clean queue");
+    return -1;
+  }
+  mq_unlink(writeQueueName);
+  if(remove(writeQueueName) == -1 && errno != ENOENT) {
     syslog(LOG_ERR, "couldn't clean queue");
     return -1;
   }
 	  
-  struct mq_attr mq_attr;
-  memset(&mq_attr, 0, sizeof(struct mq_attr));
-  mq_attr.mq_maxmsg = 10;
-  mq_attr.mq_msgsize = MAX_MSG_SIZE;
-  mq_attr.mq_flags = 0;
+  struct mq_attr mq_select_attr;
+  memset(&mq_select_attr, 0, sizeof(struct mq_attr));
+  mq_select_attr.mq_maxmsg = 10;
+  mq_select_attr.mq_msgsize = MAX_MSG_SIZE;
+  mq_select_attr.mq_flags = 0;
 
   /* create queue here to allow main to do clean up */
-  mqd_t mymq = mq_open(msgQueueName, O_CREAT, S_IRWXU, &mq_attr);
-  if(mymq == (mqd_t)ERROR) {
+  mqd_t selectQueue = mq_open(selectQueueName, O_CREAT, S_IRWXU, &mq_select_attr);
+  if(selectQueue == (mqd_t)ERROR) {
     syslog(LOG_ERR, "couldn't create queue");
     return -1;
   }
+
+  /*---------------------------------------*/
+  /* setup write message queue */
+  /*---------------------------------------*/
+
+  /* ensure MQs properly cleaned up before starting */
+  mq_unlink(writeQueueName);
+  if(remove(writeQueueName) == -1 && errno != ENOENT) {
+    syslog(LOG_ERR, "couldn't clean queue");
+    return -1;
+  }
+	  
+  struct mq_attr mq_write_attr;
+  memset(&mq_write_attr, 0, sizeof(struct mq_attr));
+  mq_write_attr.mq_maxmsg = 10;
+  mq_write_attr.mq_msgsize = MAX_MSG_SIZE;
+  mq_write_attr.mq_flags = 0;
+
+  /* create queue here to allow main to do clean up */
+  mqd_t writeQueue = mq_open(writeQueueName, O_CREAT, S_IRWXU, &mq_write_attr);
+  if(writeQueue == (mqd_t)ERROR) {
+    syslog(LOG_ERR, "couldn't create queue");
+    return -1;
+  }
+
+  /*---------------------------------------*/
+  /* create synchronization mechanizisms */
+  /*---------------------------------------*/
+  pthread_mutex_t buffMutex;
+  pthread_mutex_init(&buffMutex, NULL);
+  threadParams.pBuffMutex = &buffMutex;
 
   /*----------------------------------------------*/
   /* set scheduling policy of main and threads */
@@ -159,7 +196,8 @@ int main(int argc, char *argv[])
   /* create threads */
   /*---------------------------------------*/
   pthread_t threads[NUM_THREADS];
-  strcpy(threadParams.msgQueueName, msgQueueName);
+  strcpy(threadParams.selectQueueName, selectQueueName);
+  strcpy(threadParams.writeQueueName, writeQueueName);
 
   threadParams.cameraIdx = 0;
   threadParams.threadIdx = READ_THEAD_NUM;
@@ -184,8 +222,12 @@ int main(int argc, char *argv[])
   syslog(LOG_INFO, "..");
   syslog(LOG_INFO, ".");
   closelog();
-  mq_unlink(msgQueueName);
-  mq_close(mymq);
+  pthread_mutex_destroy(&buffMutex);
+  pthread_attr_destroy(&thread_attr);
+  mq_unlink(selectQueueName);
+  mq_unlink(writeQueueName);
+  mq_close(selectQueue);
+  mq_close(writeQueue);
 }
 
 void usage(void) 

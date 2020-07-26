@@ -65,8 +65,8 @@ void *writeTask(void *arg)
   threadParams_t threadParams = *(threadParams_t *)arg;
 
   /* open handle to queue */
-  mqd_t msgQueue = mq_open(threadParams.msgQueueName,O_WRONLY, 0666, NULL);
-  if(msgQueue == -1) {
+  mqd_t writeQueue = mq_open(threadParams.writeQueueName,O_RDONLY, 0666, NULL);
+  if(writeQueue == -1) {
     syslog(LOG_ERR, "%s couldn't open queue", __func__);
     cout << __func__<< " couldn't open queue" << endl;
     return NULL;
@@ -75,12 +75,16 @@ void *writeTask(void *arg)
   char filename[80];
   Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
 
-  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
   struct timespec startTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
 	while(1) {
     sprintf(filename,"filt%d_hough%d.jpg",threadParams.filter_enable, threadParams.hough_enable);
     imwrite(filename, img);
     sleep(10);
 	}
+  mq_close(writeQueue);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
+  return NULL;
 }

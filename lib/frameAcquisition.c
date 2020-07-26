@@ -57,10 +57,8 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 void *acquisitionTask(void*arg)
 {
-  unsigned int cnt = 0;
-  unsigned int prio = 30;
   Mat readImg;
-  struct timespec expireTime;
+  struct timespec readTime;
 
   /* get thread parameters */
   if(arg == NULL) {
@@ -69,11 +67,8 @@ void *acquisitionTask(void*arg)
   }
   threadParams_t threadParams = *(threadParams_t *)arg;
 
-  /* open handle to queue */
-  mqd_t msgQueue = mq_open(threadParams.msgQueueName,O_WRONLY, 0666, NULL);
-  if(msgQueue == -1) {
-    syslog(LOG_ERR, "%s couldn't open queue", __func__);
-    cout << __func__<< " couldn't open queue" << endl;
+  if(threadParams.pBuffMutex == NULL) {
+    syslog(LOG_ERR, "invalid mutex provided to %s", __func__);
     return NULL;
   }
 
@@ -90,27 +85,17 @@ void *acquisitionTask(void*arg)
           << " x " << cam.get(CAP_PROP_FRAME_HEIGHT) << endl;
   }
 
-  syslog(LOG_INFO, "%s (id = %d) started ...", __func__, threadParams.threadIdx);
   struct timespec startTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
   while(1) {
     /* read image from video */
     cam >> readImg;
+    clock_gettime(CLOCK_MONOTONIC, &readTime);
 
-    /* try to insert image but don't block if full
-     * so that we loop around and just get the newest */
-    clock_gettime(CLOCK_MONOTONIC, &expireTime);
-    if(mq_timedsend(msgQueue, (const char *)&readImg, MAX_MSG_SIZE, prio, &expireTime) != 0) {
-      /* don't print if queue was empty */
-      if(errno != ETIMEDOUT) {
-        syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));
-      }
-      cout << __func__ << " error with mq_send, errno: " << errno << " [" << strerror(errno) << "]" << endl;
-    } else {
-      ++cnt;
-    }
+    /* todo: insert in circular buffer */
   }
-  syslog(LOG_INFO, "%s exiting", __func__);
-  mq_close(msgQueue);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

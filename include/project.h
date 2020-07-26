@@ -18,6 +18,7 @@
 
 /*---------------------------------------------------------------------------------*/
 /* INCLUDES */
+#include <semaphore.h>
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
@@ -35,11 +36,14 @@ typedef enum {
 } FilterType_e;
 
 typedef struct {
-  int threadIdx;              /* thread id */
-  int cameraIdx;              /* index of camera */
-  char msgQueueName[64];      /* message queue */
-  unsigned int hough_enable;  /* enable hough transformations */
-  unsigned int filter_enable; /* enable filtering */
+  int threadIdx;                /* thread id */
+  int cameraIdx;                /* index of camera */
+  sem_t *pSema;                 /* semaphore */
+  char selectQueueName[64];     /* message queue */
+  char writeQueueName[64];      /* message queue */
+  pthread_mutex_t *pBuffMutex;  /* image circular buffer queue */
+  unsigned int hough_enable;    /* enable hough transformations */
+  unsigned int filter_enable;   /* enable filtering */
 } threadParams_t;
 
 #endif
