@@ -25,9 +25,15 @@
 
 #define MAX_IMG_ROWS                  (480)
 #define MAX_IMG_COLS                  (640)
-#define MAX_MSG_SIZE                  (sizeof(cv::Mat))
+
 #define TIMESPEC_TO_MSEC(time)	      ((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6))
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
+
+#define SELECT_QUEUE_MSG_SIZE         (sizeof(cv::Mat))
+#define SELECT_QUEUE_LENGTH           (10)
+#define WRITE_QUEUE_MSG_SIZE          (sizeof(cv::Mat))
+#define WRITE_QUEUE_LENGTH             (10)
+
 
 typedef enum {
   USE_GAUSSIAN_BLUR,

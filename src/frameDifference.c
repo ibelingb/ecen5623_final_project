@@ -1,6 +1,6 @@
 /***********************************************************************************
  * @author Joshua Malburg
- * joshua.malburg@colordo.edu
+ * joshua.malburg@colorado.edu
  * 
  * Real-time Embedded Systems
  * ECEN5623 - Sam Siewert
@@ -8,7 +8,7 @@
  * Ubuntu 18.04 LTS and RPi 3B+
  ************************************************************************************
  *
- * @file frameAcquisition.c
+ * @file frameDifference.c
  * @brief 
  *
  ************************************************************************************
@@ -55,10 +55,10 @@ using namespace std;
 /* GLOBAL VARIABLES */
 
 /*---------------------------------------------------------------------------------*/
-void *acquisitionTask(void*arg)
+void *differenceTask(void *arg)
 {
-  Mat readImg;
-  struct timespec readTime;
+  unsigned int cnt = 0;
+  unsigned int prio = 30;
 
   /* get thread parameters */
   if(arg == NULL) {
@@ -72,29 +72,42 @@ void *acquisitionTask(void*arg)
     return NULL;
   }
 
-  /* open camera stream */
-  VideoCapture cam;
-  if(!cam.open(threadParams.cameraIdx)) {
-    syslog(LOG_ERR, "couldn't open camera");
-    cout << "couldn't open camera" << endl;
+  /* open handle to queue */
+  mqd_t selectQueue = mq_open(threadParams.selectQueueName,O_WRONLY, 0666, NULL);
+  if(selectQueue == -1) {
+    syslog(LOG_ERR, "%s couldn't open queue", __func__);
+    cout << __func__<< " couldn't open queue" << endl;
     return NULL;
-  } else {
-    cam.set(CAP_PROP_FRAME_WIDTH, 640);
-    cam.set(CAP_PROP_FRAME_HEIGHT, 480);
-    cout  << "cam size (HxW): " << cam.get(CAP_PROP_FRAME_WIDTH)
-          << " x " << cam.get(CAP_PROP_FRAME_HEIGHT) << endl;
   }
 
-  struct timespec startTime;
+  
+  struct timespec startTime, sendTime, expireTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
   syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
-  while(1) {
-    /* read image from video */
-    cam >> readImg;
-    clock_gettime(CLOCK_MONOTONIC, &readTime);
+  Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
+	while(1) {
+    /*todo: cycle through circular buffer */
 
-    /* todo: insert in circular buffer */
-  }
+    /*todo: find difference */
+
+    /* try to insert image but don't block if full
+     * so that we loop around and just get the newest */
+    clock_gettime(CLOCK_MONOTONIC, &expireTime);
+    if(mq_timedsend(selectQueue, (const char *)&img, MAX_MSG_SIZE, prio, &expireTime) != 0) {
+      /* don't print if queue was empty */
+      if(errno != ETIMEDOUT) {
+        syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));
+      }
+      cout << __func__ << " error with mq_send, errno: " << errno << " [" << strerror(errno) << "]" << endl;
+    } else {
+      clock_gettime(CLOCK_MONOTONIC, &sendTime);
+      syslog(LOG_INFO, "%s sent image#%d at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+      ++cnt;
+    }
+
+		sleep(1);
+	}
+  mq_close(selectQueue);
   clock_gettime(CLOCK_MONOTONIC, &startTime);
   syslog(LOG_INFO, "%s (id = %d) exiting at: %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
   return NULL;

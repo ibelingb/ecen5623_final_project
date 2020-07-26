@@ -141,12 +141,12 @@ int main(int argc, char *argv[])
 	  
   struct mq_attr mq_select_attr;
   memset(&mq_select_attr, 0, sizeof(struct mq_attr));
-  mq_select_attr.mq_maxmsg = 10;
-  mq_select_attr.mq_msgsize = MAX_MSG_SIZE;
+  mq_select_attr.mq_maxmsg = WRITE_QUEUE_LENGTH;
+  mq_select_attr.mq_msgsize = WRITE_QUEUE_MSG_SIZE;
   mq_select_attr.mq_flags = 0;
 
-  /* create queue here to allow main to do clean up */
-  mqd_t selectQueue = mq_open(selectQueueName, O_CREAT, S_IRWXU, &mq_select_attr);
+  /* this queue is setup as non-blocking because its used by RT threads */
+  mqd_t selectQueue = mq_open(selectQueueName, O_CREAT | O_NONBLOCK, S_IRWXU, &mq_select_attr);
   if(selectQueue == (mqd_t)ERROR) {
     syslog(LOG_ERR, "couldn't create queue");
     return -1;
@@ -165,11 +165,11 @@ int main(int argc, char *argv[])
 	  
   struct mq_attr mq_write_attr;
   memset(&mq_write_attr, 0, sizeof(struct mq_attr));
-  mq_write_attr.mq_maxmsg = 10;
-  mq_write_attr.mq_msgsize = MAX_MSG_SIZE;
+  mq_write_attr.mq_maxmsg = WRITE_QUEUE_LENGTH;
+  mq_write_attr.mq_msgsize = WRITE_QUEUE_MSG_SIZE;
   mq_write_attr.mq_flags = 0;
 
-  /* create queue here to allow main to do clean up */
+  /* allow write queue to block so writeTask just waits on messages */
   mqd_t writeQueue = mq_open(writeQueueName, O_CREAT, S_IRWXU, &mq_write_attr);
   if(writeQueue == (mqd_t)ERROR) {
     syslog(LOG_ERR, "couldn't create queue");
