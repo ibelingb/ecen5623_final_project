@@ -93,7 +93,7 @@ void *differenceTask(void *arg)
     /* try to insert image but don't block if full
      * so that we loop around and just get the newest */
     clock_gettime(CLOCK_MONOTONIC, &expireTime);
-    if(mq_timedsend(selectQueue, (const char *)&img, MAX_MSG_SIZE, prio, &expireTime) != 0) {
+    if(mq_timedsend(selectQueue, (const char *)&img, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
       /* don't print if queue was empty */
       if(errno != ETIMEDOUT) {
         syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));

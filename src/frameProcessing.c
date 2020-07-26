@@ -101,7 +101,7 @@ void *processingTask(void *arg)
   syslog(LOG_INFO, "%s (id = %d) started at %f", __func__, threadParams.threadIdx,  TIMESPEC_TO_MSEC(startTime));
   while(1) {
     /* read oldest, highest priority msg from the message queue */
-    if(mq_receive(selectQueue, (char *)&inputImg, MAX_MSG_SIZE, &prio) < 0) {
+    if(mq_receive(selectQueue, (char *)&inputImg, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
       /* don't print if queue was empty */
       if(errno != EAGAIN) {
         syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));

@@ -13,10 +13,10 @@
 
 # source files
 SRCS += main/project.c \
-				lib/frameAcquisition.c \
-				lib/frameDifference.c \
-				lib/frameProcessing.c \
-				lib/frameWrite.c \
-				lib/sequencer.c
+				src/frameAcquisition.c \
+				src/frameDifference.c \
+				src/frameProcessing.c \
+				src/frameWrite.c \
+				src/sequencerJM.c
 
 PLATFORM = UBUNTU
