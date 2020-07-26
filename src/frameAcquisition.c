@@ -57,9 +57,6 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 void *acquisitionTask(void*arg)
 {
-  Mat readImg;
-  struct timespec readTime;
-
   /* get thread parameters */
   if(arg == NULL) {
     syslog(LOG_ERR, "invalid arg provided to %s", __func__);
@@ -67,8 +64,8 @@ void *acquisitionTask(void*arg)
   }
   threadParams_t threadParams = *(threadParams_t *)arg;
 
-  if(threadParams.pBuffMutex == NULL) {
-    syslog(LOG_ERR, "invalid mutex provided to %s", __func__);
+  if(threadParams.pSema == NULL) {
+    syslog(LOG_ERR, "invalid semaphore provided to %s", __func__);
     return NULL;
   }
   if(threadParams.pCBuff == NULL) {
@@ -89,21 +86,40 @@ void *acquisitionTask(void*arg)
           << " x " << cam.get(CAP_PROP_FRAME_HEIGHT) << endl;
   }
 
-  struct timespec startTime;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  Mat readImg;
+  struct timespec readTime;
+  clock_gettime(CLOCK_REALTIME, &readTime);
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(readTime));
   while(1) {
+    /* wait for semaphore */
+    clock_gettime(CLOCK_REALTIME, &readTime);
+    readTime.tv_nsec += 50*1e6;
+    if(readTime.tv_nsec  > 1e9) {
+      readTime.tv_sec += 1;
+      readTime.tv_nsec -= 1e9;
+    }
+    if(sem_timedwait(threadParams.pSema, &readTime) < 0) {
+      if(errno != ETIMEDOUT) {
+        syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
+      } else {
+        syslog(LOG_ERR, "%s semaphore timed out", __func__);
+      }
+    }
+
     /* read image from video */
     cam >> readImg;
-    clock_gettime(CLOCK_MONOTONIC, &readTime);
+    if(!readImg.empty()) {
+      clock_gettime(CLOCK_REALTIME, &readTime);
 
-    /* insert in circular buffer */
-    threadParams.pCBuff->put(readImg);
-    if(threadParams.pCBuff->full()) {
-      syslog(LOG_WARNING, "circular buffer full");
+      /* insert in circular buffer */
+      threadParams.pCBuff->put(readImg);
+      syslog(LOG_INFO, "frame acquired/inserted at: %f", TIMESPEC_TO_MSEC(readTime));
+      if(threadParams.pCBuff->full()) {
+        syslog(LOG_WARNING, "circular buffer full");
+      }
     }
   }
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  clock_gettime(CLOCK_REALTIME, &readTime);
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(readTime));
   return NULL;
 }

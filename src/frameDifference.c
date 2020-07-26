@@ -67,11 +67,10 @@ void *differenceTask(void *arg)
   }
   threadParams_t threadParams = *(threadParams_t *)arg;
 
-  if(threadParams.pBuffMutex == NULL) {
-    syslog(LOG_ERR, "invalid mutex provided to %s", __func__);
+  if(threadParams.pSema == NULL) {
+    syslog(LOG_ERR, "invalid semaphore provided to %s", __func__);
     return NULL;
   }
-
   if(threadParams.pCBuff == NULL) {
     syslog(LOG_ERR, "invalid circular buffer provided to %s", __func__);
     return NULL;
@@ -86,22 +85,44 @@ void *differenceTask(void *arg)
   }
   
   struct timespec startTime, sendTime, expireTime;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   Mat prevFrame;
   Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
 	while(1) {
+    /* wait for semaphore */
+    clock_gettime(CLOCK_REALTIME, &expireTime);
+    expireTime.tv_nsec += 50e6;
+    if(expireTime.tv_nsec  > 1e9) {
+      expireTime.tv_sec += 1;
+      expireTime.tv_nsec -= 1e9;
+    }
+    if(sem_timedwait(threadParams.pSema, &expireTime) < 0) {
+      if(errno != ETIMEDOUT) {
+        syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
+      } else {
+        syslog(LOG_ERR, "%s semaphore timed out", __func__);
+      }
+    }
 
     /* if this is the first time through, fill previous frame */
-    if(prevFrame.empty() && threadParams.pCBuff->capacity() > 0) {
+    if(prevFrame.empty() && !threadParams.pCBuff->empty()) {
       prevFrame = threadParams.pCBuff->get();
+      if(prevFrame.empty()) {
+        cout << "ERROR: prevFrame empty still!" << endl;
+        continue;
+      }
       cvtColor(prevFrame, prevFrame, COLOR_RGB2GRAY);
     }
 
     /* continue as long as there's frames in buffer */
-    while(threadParams.pCBuff->capacity() > 0)
+    while(!threadParams.pCBuff->empty())
     {
       Mat nextFrame = threadParams.pCBuff->get();
+      if(nextFrame.empty()) {
+        cout << "ERROR: nextFrame empty still!" << endl;
+        continue;
+      }
       cvtColor(nextFrame, nextFrame, COLOR_RGB2GRAY);
 
       /* find difference */
@@ -117,7 +138,7 @@ void *differenceTask(void *arg)
         waitKey();
         /* try to insert image but don't block if full
         * so that we loop around and just get the newest */
-        clock_gettime(CLOCK_MONOTONIC, &expireTime);
+        clock_gettime(CLOCK_REALTIME, &expireTime);
         if(mq_timedsend(selectQueue, (const char *)&nextFrame, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
           /* don't print if queue was empty */
           if(errno != ETIMEDOUT) {
@@ -125,19 +146,17 @@ void *differenceTask(void *arg)
           }
           cout << __func__ << " error with mq_send, errno: " << errno << " [" << strerror(errno) << "]" << endl;
         } else {
-          clock_gettime(CLOCK_MONOTONIC, &sendTime);
+          clock_gettime(CLOCK_REALTIME, &sendTime);
           syslog(LOG_INFO, "%s sent image#%d at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
           ++cnt;
         }
       }
-
       /* store old frame */
       nextFrame.copyTo(prevFrame);
     }
-		sleep(1);
 	}
   mq_close(selectQueue);
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

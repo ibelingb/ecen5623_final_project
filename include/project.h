@@ -35,23 +35,24 @@
 #define SELECT_QUEUE_LENGTH           (10)
 #define WRITE_QUEUE_MSG_SIZE          (sizeof(cv::Mat))
 #define WRITE_QUEUE_LENGTH            (10)
-#define CIRCULAR_BUFF_LEN             (12)
+#define CIRCULAR_BUFF_LEN             (25)
 
 
 typedef enum {
   ACQ_THREAD = 0,
-  DIFF_THREAD = 1,
-  WRITE_THREAD = 2,
-  SEQ_THREAD = 3,
-  TOTAL_THREADS = 4
+  DIFF_THREAD,
+  PROC_THREAD,
+  WRITE_THREAD,
+  SEQ_THREAD,
+  TOTAL_THREADS
 } Thread_e;
+#define TOTAL_RT_THREADS  ((unsigned int)TOTAL_THREADS - 2)
 
 typedef struct {
   int cameraIdx;                              /* index of camera */
   sem_t *pSema;                               /* semaphore */
   char selectQueueName[64];                   /* message queue */
   char writeQueueName[64];                    /* message queue */
-  pthread_mutex_t *pBuffMutex;                /* image circular buffer queue */
   circular_buffer<cv::Mat> *pCBuff;           /* circular buffer pointer */
   unsigned int hough_enable;                  /* enable hough transformations */
   unsigned int filter_enable;                 /* enable filtering */

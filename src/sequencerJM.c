@@ -65,13 +65,13 @@ void *sequencerTask(void *arg)
   }
 
   struct timespec startTime;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 	while(1) {
 
 		sleep(1);
 	}
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

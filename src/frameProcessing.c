@@ -72,6 +72,11 @@ void *processingTask(void *arg)
   }
   threadParams_t threadParams = *(threadParams_t *)arg;
 
+  if(threadParams.pSema == NULL) {
+    syslog(LOG_ERR, "invalid semaphore provided to %s", __func__);
+    return NULL;
+  }
+
   /* open handle to queue */
   mqd_t selectQueue = mq_open(threadParams.selectQueueName, O_RDONLY, 0666, NULL);
   if(selectQueue == -1) {
@@ -97,9 +102,20 @@ void *processingTask(void *arg)
   float cumJitter_ms;
   
   struct timespec startTime;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   while(1) {
+    /* wait for semaphore */
+    clock_gettime(CLOCK_REALTIME, &readTime);
+    readTime.tv_sec += 1;
+    if(sem_timedwait(threadParams.pSema, &readTime) < 0) {
+      if(errno != ETIMEDOUT) {
+        syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
+      } else {
+        syslog(LOG_ERR, "%s semaphore timed out", __func__);
+      }
+    }
+
     /* read oldest, highest priority msg from the message queue */
     if(mq_receive(selectQueue, (char *)&inputImg, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
       /* don't print if queue was empty */
@@ -108,14 +124,14 @@ void *processingTask(void *arg)
       }
     } else {
       /* process image */
-      clock_gettime(CLOCK_MONOTONIC, &procTime);
+      clock_gettime(CLOCK_REALTIME, &procTime);
       if(threadParams.filter_enable) {
         GaussianBlur(inputImg, inputImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
         filter2D(inputImg, inputImg, CV_8U, kern2D);
         sepFilter2D(inputImg, inputImg, CV_8U, kern1D, kern1D);
       }
 
-      clock_gettime(CLOCK_MONOTONIC, &readTime);
+      clock_gettime(CLOCK_REALTIME, &readTime);
       if(cnt > 0) {
         cumProcTime += CALC_DT_MSEC(readTime, procTime);
         cumTime += CALC_DT_MSEC(readTime, prevTime);
@@ -135,7 +151,7 @@ void *processingTask(void *arg)
 
   mq_close(selectQueue);
   mq_close(writeQueue);
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

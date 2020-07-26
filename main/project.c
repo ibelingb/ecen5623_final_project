@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
   syslog(LOG_INFO, "..");
   syslog(LOG_INFO, "...");
   struct timespec startTime;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 
   if (argc < 3) {
@@ -180,9 +180,13 @@ int main(int argc, char *argv[])
   /*---------------------------------------*/
   /* create synchronization mechanizisms */
   /*---------------------------------------*/
-  pthread_mutex_t buffMutex;
-  pthread_mutex_init(&buffMutex, NULL);
-  threadParams.pBuffMutex = &buffMutex;
+  sem_t semas[TOTAL_RT_THREADS];
+  for(uint8_t ind = 0; ind < TOTAL_RT_THREADS; ++ind) {
+    if (sem_init(&semas[ind], 0, 0)) {
+      syslog(LOG_ERR, "couldn't create semaphore");
+      return -1;
+    }
+  }
 
   /*----------------------------------------------*/
   /* set scheduling policy of main and threads */
@@ -196,16 +200,33 @@ int main(int argc, char *argv[])
   /*---------------------------------------*/
   /* create threads */
   /*---------------------------------------*/
-  pthread_t threads[TOTAL_THREADS];
   strcpy(threadParams.selectQueueName, selectQueueName);
   strcpy(threadParams.writeQueueName, writeQueueName);
 
+  pthread_t threads[TOTAL_THREADS];
+  threadParams.pSema = &semas[ACQ_THREAD];
   if(pthread_create(&threads[ACQ_THREAD], &thread_attr, acquisitionTask, (void *)&threadParams) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", ACQ_THREAD);
   }
 
-  if(pthread_create(&threads[DIFF_THREAD], &thread_attr, processingTask, (void *)&threadParams) != 0) {
+  threadParams.pSema = &semas[DIFF_THREAD];
+  if(pthread_create(&threads[DIFF_THREAD], &thread_attr, differenceTask, (void *)&threadParams) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", DIFF_THREAD);
+  }
+
+  threadParams.pSema = &semas[PROC_THREAD];
+  if(pthread_create(&threads[PROC_THREAD], &thread_attr, processingTask, (void *)&threadParams) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", PROC_THREAD);
+  }
+
+  threadParams.pSema = NULL;
+  if(pthread_create(&threads[WRITE_THREAD], &thread_attr, writeTask, (void *)&threadParams) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", WRITE_THREAD);
+  }
+
+  threadParams.pSema = NULL;
+  if(pthread_create(&threads[SEQ_THREAD], &thread_attr, sequencerTask, (void *)&threadParams) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", SEQ_THREAD);
   }
 
   /*----------------------------------------------*/
@@ -220,7 +241,10 @@ syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIM
   syslog(LOG_INFO, "..");
   syslog(LOG_INFO, ".");
   closelog();
-  pthread_mutex_destroy(&buffMutex);
+
+  for(uint8_t ind = 0; ind < TOTAL_RT_THREADS; ++ind) {
+      sem_destroy(&semas[ind]);
+  }
   pthread_attr_destroy(&thread_attr);
   mq_unlink(selectQueueName);
   mq_unlink(writeQueueName);

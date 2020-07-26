@@ -76,15 +76,15 @@ void *writeTask(void *arg)
   Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
 
   struct timespec startTime;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 	while(1) {
     sprintf(filename,"filt%d_hough%d.jpg",threadParams.filter_enable, threadParams.hough_enable);
     imwrite(filename, img);
-    sleep(10);
+    sleep(1);
 	}
   mq_close(writeQueue);
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }
