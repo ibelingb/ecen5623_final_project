@@ -30,14 +30,11 @@
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
-#include <opencv2/imgproc.hpp>  // Gaussian Blur
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>  // OpenCV window I/O
 
-#include <iostream> // for standard I/O
-#include <string>   // for strings
-#include <iomanip>  // for controlling float print precision
-#include <sstream>  // string to number conversion
+#include <iostream>             // for standard I/O
+#include <string>               // for strings
+#include <iomanip>              // for controlling float print precision
+#include <sstream>              // string to number conversion
 
 using namespace cv;
 using namespace std;
@@ -49,6 +46,7 @@ using namespace std;
 #include "frameWrite.h"
 #include "sequencer.h"
 #include "project.h"
+#include "circular_buffer.h"
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
@@ -175,6 +173,11 @@ int main(int argc, char *argv[])
     syslog(LOG_ERR, "couldn't create queue");
     return -1;
   }
+  /*---------------------------------------*/
+  /* create circular buffer */
+  /*---------------------------------------*/
+  circular_buffer<cv::Mat> imgBuff(CIRCULAR_BUFF_LEN);
+  threadParams.pCBuff = &imgBuff;
 
   /*---------------------------------------*/
   /* create synchronization mechanizisms */

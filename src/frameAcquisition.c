@@ -34,16 +34,17 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>  // OpenCV window I/O
 
-#include <iostream> // for standard I/O
-#include <string>   // for strings
-#include <iomanip>  // for controlling float print precision
-#include <sstream>  // string to number conversion
+#include <iostream>             // for standard I/O
+#include <string>               // for strings
+#include <iomanip>              // for controlling float print precision
+#include <sstream>              // string to number conversion
 
 using namespace cv;
 using namespace std;
 
 /* project headers */
 #include "project.h"
+#include "circular_buffer.h"
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
