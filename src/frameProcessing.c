@@ -91,16 +91,20 @@ void *processingTask(void *arg)
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   Mat kern2D = kern1D * kern1D.t();
   
-  struct timespec startTime;
-  Mat inputImg;
+  struct timespec startTime, expireTime;
+  Mat readImg, procImg;
   unsigned int prio;
   clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &startTime);
-    startTime.tv_sec += ACQ_THREAD_SEMA_TIMEOUT;
-    if(sem_timedwait(threadParams.pSema, &startTime) < 0) {
+    clock_gettime(CLOCK_REALTIME, &expireTime);
+    expireTime.tv_nsec += PROC_THREAD_SEMA_TIMEOUT;
+    if(expireTime.tv_nsec > 1e9) {
+      expireTime.tv_sec += 1;
+      expireTime.tv_nsec -= 1e9;
+    }
+    if(sem_timedwait(threadParams.pSema, &expireTime) < 0) {
       if(errno != ETIMEDOUT) {
         syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
       } else {
@@ -109,18 +113,26 @@ void *processingTask(void *arg)
     }
 
     /* read oldest, highest priority msg from the message queue */
-    if(mq_receive(selectQueue, (char *)&inputImg, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
+    if(mq_receive(selectQueue, (char *)&readImg, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
       /* don't print if queue was empty */
       if(errno != EAGAIN) {
         syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
       }
     } else {
-      /* process image */
-      syslog(LOG_INFO, "%s processing image", __func__);
-      if(threadParams.filter_enable) {
-        GaussianBlur(inputImg, inputImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
-        filter2D(inputImg, inputImg, CV_8U, kern2D);
-        sepFilter2D(inputImg, inputImg, CV_8U, kern1D, kern1D);
+      if (readImg.empty() || (readImg.rows == 0) || (readImg.cols == 0)) {
+        syslog(LOG_ERR, "%s received bad frame: empty = %d, rows = %d, cols = %d", __func__, readImg.empty(), readImg.rows, readImg.cols);
+      } else {
+        procImg = readImg.clone();
+        imshow("proc", procImg);
+        waitKey(1);
+
+        /* process image */
+        syslog(LOG_INFO, "%s processing image", __func__);
+        if(threadParams.filter_enable) {
+          // GaussianBlur(procImg, procImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
+          // filter2D(procImg, procImg, CV_8U, kern2D);
+          // sepFilter2D(procImg, procImg, CV_8U, kern1D, kern1D);
+        }
       }
     }
   }

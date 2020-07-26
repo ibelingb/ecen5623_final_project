@@ -92,7 +92,7 @@ void *differenceTask(void *arg)
 	while(1) {
     /* wait for semaphore */
     clock_gettime(CLOCK_REALTIME, &expireTime);
-    expireTime.tv_nsec += ACQ_THREAD_SEMA_TIMEOUT;
+    expireTime.tv_nsec += DIFF_THREAD_SEMA_TIMEOUT;
     if(expireTime.tv_nsec > 1e9) {
       expireTime.tv_sec += 1;
       expireTime.tv_nsec -= 1e9;
@@ -134,12 +134,14 @@ void *differenceTask(void *arg)
 
       /* if difference detected, send for processing */
       if(countNonZero(bw) > 10) {
-        imshow("diff", diffFrame);
-        waitKey();
+        void *pixelData = malloc(nextFrame.rows * nextFrame.step);
+        Mat sentFrame(nextFrame.size(), nextFrame.type(), pixelData, nextFrame.step);
+        sentFrame = nextFrame.clone();
+
         /* try to insert image but don't block if full
         * so that we loop around and just get the newest */
         clock_gettime(CLOCK_REALTIME, &expireTime);
-        if(mq_timedsend(selectQueue, (const char *)&nextFrame, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
+        if(mq_timedsend(selectQueue, (char *)&sentFrame, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
           /* don't print if queue was empty */
           if(errno != ETIMEDOUT) {
             syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));
