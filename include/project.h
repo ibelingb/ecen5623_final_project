@@ -32,8 +32,15 @@
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
 
 /* for queues */
-#define SELECT_QUEUE_MSG_SIZE         (sizeof(cv::Mat))
-#define SELECT_QUEUE_LENGTH           (2)
+typedef struct {
+  uint8_t *data;
+  int type;
+  int rows;
+  int cols;
+  size_t elem_size;
+} imgDef_t;
+#define SELECT_QUEUE_MSG_SIZE         (sizeof(imgDef_t))
+#define SELECT_QUEUE_LENGTH           (10)
 #define WRITE_QUEUE_MSG_SIZE          (sizeof(cv::Mat))
 #define WRITE_QUEUE_LENGTH            (10)
 #define CIRCULAR_BUFF_LEN             (13)

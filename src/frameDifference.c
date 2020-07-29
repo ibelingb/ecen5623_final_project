@@ -134,14 +134,24 @@ void *differenceTask(void *arg)
 
       /* if difference detected, send for processing */
       if(countNonZero(bw) > 10) {
-        void *pixelData = malloc(nextFrame.rows * nextFrame.step);
-        Mat sentFrame(nextFrame.size(), nextFrame.type(), pixelData, nextFrame.step);
-        sentFrame = nextFrame.clone();
+        int len = nextFrame.rows * nextFrame.cols * nextFrame.elemSize();
+        uint8_t *pixelData = (uint8_t *)malloc(len);
+        memcpy(pixelData, nextFrame.data, len);
+
+        /* this is a really ugly way to do this but I didn't 
+         * know how to get around the ref count / auto-memory
+         * managment of C++; thought about using STL container instead
+         * but MQs is what we learned in class */
+        imgDef_t dummy = {  .data = pixelData, 
+                            .type = nextFrame.type(), 
+                            .rows = nextFrame.rows, 
+                            .cols = nextFrame.cols, 
+                            .elem_size = nextFrame.elemSize() };
 
         /* try to insert image but don't block if full
         * so that we loop around and just get the newest */
         clock_gettime(CLOCK_REALTIME, &expireTime);
-        if(mq_timedsend(selectQueue, (char *)&sentFrame, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
+        if(mq_timedsend(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
           /* don't print if queue was empty */
           if(errno != ETIMEDOUT) {
             syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));

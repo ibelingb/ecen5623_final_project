@@ -113,26 +113,29 @@ void *processingTask(void *arg)
     }
 
     /* read oldest, highest priority msg from the message queue */
-    if(mq_receive(selectQueue, (char *)&readImg, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
+    imgDef_t dummy;
+    if(mq_receive(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
       /* don't print if queue was empty */
       if(errno != EAGAIN) {
         syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
       }
     } else {
-      if (readImg.empty() || (readImg.rows == 0) || (readImg.cols == 0)) {
-        syslog(LOG_ERR, "%s received bad frame: empty = %d, rows = %d, cols = %d", __func__, readImg.empty(), readImg.rows, readImg.cols);
+      if ((dummy.rows == 0) || (dummy.cols == 0)) {
+        syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, dummy.rows, dummy.cols);
       } else {
-        procImg = readImg.clone();
-        imshow("proc", procImg);
-        waitKey(1);
+        Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
 
         /* process image */
         syslog(LOG_INFO, "%s processing image", __func__);
         if(threadParams.filter_enable) {
-          // GaussianBlur(procImg, procImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
+          GaussianBlur(readImg, procImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
           // filter2D(procImg, procImg, CV_8U, kern2D);
           // sepFilter2D(procImg, procImg, CV_8U, kern1D, kern1D);
+          imshow("procImg", procImg);
+        } else {
+          imshow("procImg", readImg);
         }
+        waitKey(1);
       }
     }
   }

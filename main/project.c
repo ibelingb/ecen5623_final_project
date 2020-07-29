@@ -140,8 +140,8 @@ int main(int argc, char *argv[])
 	  
   struct mq_attr mq_select_attr;
   memset(&mq_select_attr, 0, sizeof(struct mq_attr));
-  mq_select_attr.mq_maxmsg = WRITE_QUEUE_LENGTH;
-  mq_select_attr.mq_msgsize = WRITE_QUEUE_MSG_SIZE;
+  mq_select_attr.mq_maxmsg = SELECT_QUEUE_LENGTH;
+  mq_select_attr.mq_msgsize = SELECT_QUEUE_MSG_SIZE;
   mq_select_attr.mq_flags = 0;
 
   /* this queue is setup as non-blocking because its used by RT threads */
