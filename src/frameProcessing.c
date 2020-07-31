@@ -102,7 +102,7 @@ void *processingTask(void *arg)
     clock_gettime(CLOCK_REALTIME, &expireTime);
     expireTime.tv_nsec += PROC_THREAD_SEMA_TIMEOUT;
     if(expireTime.tv_nsec > 1e9) {
-      expireTime.tv_sec += 3;
+      expireTime.tv_sec += 1;
       expireTime.tv_nsec -= 1e9;
     }
     if(sem_timedwait(threadParams.pSema, &expireTime) < 0) {

@@ -95,7 +95,7 @@ void *acquisitionTask(void*arg)
     clock_gettime(CLOCK_REALTIME, &readTime);
     readTime.tv_nsec += ACQ_THREAD_SEMA_TIMEOUT;
     if(readTime.tv_nsec  > 1e9) {
-      readTime.tv_sec += 3;
+      readTime.tv_sec += 1;
       readTime.tv_nsec -= 1e9;
     }
     if(sem_timedwait(threadParams.pSema, &readTime) < 0) {

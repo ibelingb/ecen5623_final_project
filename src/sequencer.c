@@ -38,6 +38,20 @@
 
 #define CLOCK_TYPE CLOCK_MONOTONIC_RAW
 #define SCHED_TYPE SCHED_FIFO
+
+#define SEQ_TIMER_INTERVAL (8333333) // 120 Hz
+//#define SEQ_TIMER_INTERVAL (10000000) // 100 Hz
+
+#define ACQUIRE_FRAMES_EXEC_RATE_HZ (24)
+#define DIFFERENCE_FRAMES_EXEC_RATE_HZ (2)
+#define SELECT_FRAMES_EXEC_RATE_HZ (1)
+#define WRITE_FRAMES_EXEC_RATE_HZ (1)
+
+#define ACQUIRE_FRAMES_MOD_CALC (120 / ACQUIRE_FRAMES_EXEC_RATE_HZ)
+#define DIFFERENCE_FRAMES_MOD_CALC (120 / DIFFERENCE_FRAMES_EXEC_RATE_HZ)
+#define SELECT_FRAMES_MOD_CALC (120 / SELECT_FRAMES_EXEC_RATE_HZ)
+#define WRITE_FRAMES_MOD_CALC (120 / WRITE_FRAMES_EXEC_RATE_HZ)
+
 /*------------------------------------------------------------------------*/
 static unsigned long long sequenceCount = 0;
 static unsigned long long framesSaved = 0;
@@ -70,30 +84,29 @@ void sequencer(int signal) {
   sequenceCount++;
 
   /* Post a semaphore for each service based on sub-rate of sequencer */
-
   // Acquire Frames @ 24 Hz
-  if((sequenceCount % 5) == 0) {
+  if((sequenceCount % (int)ACQUIRE_FRAMES_MOD_CALC) == 0) {
     sem_post(pAcqSema);
   }
 
-  // Determine Frame Differences @ 1 Hz
-  if((sequenceCount % 60) == 0) {
+  // Determine Frame Differences @ 2 Hz
+  if((sequenceCount % (int)DIFFERENCE_FRAMES_MOD_CALC) == 0) {
     sem_post(pDiffSema);
   }
 
   // Process frame images @ 1 Hz
-  if((sequenceCount % 60) == 0) {
+  if((sequenceCount % (int)SELECT_FRAMES_MOD_CALC) == 0) {
     sem_post(pProcSema);
   }
-/* TODO - Add once WriteThread setup and waiting for semaphore
+  /*
   // Write Frames to memory @ 1 Hz
-  if((sequenceCount % 120) == 0) {
+  if((sequenceCount % WRITE_FRAMES_MOD_CALC) == 0) {
     sem_post(pWriteSema);
     framesSaved++;
   }
-*/
+  */
 
-  /* Max desired frames saved - initiate close of application */
+  /* Max desired frames saved - initiate shutdown of application */
   if(framesSaved == MAX_FRAME_COUNT) {
     sem_post(&appCompleteSem);
   }
@@ -148,18 +161,17 @@ void *sequencerTask(void *arg) {
   timer_create(CLOCK_REALTIME, NULL, &seqTimer);
   signal(SIGALRM, sequencer);
   itime.it_interval.tv_sec = 0;
-  //itime.it_interval.tv_nsec = 10000000;
-  itime.it_interval.tv_nsec = 8333333;
+  itime.it_interval.tv_nsec = SEQ_TIMER_INTERVAL;
   itime.it_value.tv_sec = 0;
-  //itime.it_value.tv_nsec = 10000000;
-  itime.it_value.tv_nsec = 8333333;
+  itime.it_value.tv_nsec = SEQ_TIMER_INTERVAL;
   timer_settime(seqTimer, flags, &itime, &last_itime);
 
   // Block until released from sequencer after 1800 acquired frames
   sem_wait(&appCompleteSem);
 
-  // Sleep expired - cleanup thread and exit
+  // Cleanup thread and exit
   timer_delete(seqTimer);
+  sem_destroy(&appCompleteSem);
 
   return NULL;
 }
