@@ -57,12 +57,22 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 void *writeTask(void *arg)
 {
+  char filename[80];
+  Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
+  struct timespec startTime, expireTime;
+
   /* get thread parameters */
   if(arg == NULL) {
     syslog(LOG_ERR, "invalid arg provided to %s", __func__);
     return NULL;
   }
   threadParams_t threadParams = *(threadParams_t *)arg;
+
+  /* Verify semaphore is valid */
+  if(threadParams.pSema == NULL) {
+    syslog(LOG_ERR, "invalid semaphore provided to %s", __func__);
+    return NULL;
+  }
 
   /* open handle to queue */
   mqd_t writeQueue = mq_open(threadParams.writeQueueName,O_RDONLY, 0666, NULL);
@@ -72,19 +82,32 @@ void *writeTask(void *arg)
     return NULL;
   }
 
-  char filename[80];
-  Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
-
-  struct timespec startTime;
   clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 	while(1) {
+    /* wait for semaphore */
+    clock_gettime(CLOCK_REALTIME, &expireTime);
+    expireTime.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
+    if(expireTime.tv_nsec > 1e9) {
+      expireTime.tv_sec += 1;
+      expireTime.tv_nsec -= 1e9;
+    }
+    if(sem_timedwait(threadParams.pSema, &expireTime) < 0) {
+      if(errno != ETIMEDOUT) {
+        syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
+      } else {
+        syslog(LOG_ERR, "%s semaphore timed out", __func__);
+      }
+    }
+
     sprintf(filename,"filt%d_hough%d.jpg",threadParams.filter_enable, threadParams.hough_enable);
     imwrite(filename, img);
-    sleep(1);
+
 	}
+
   mq_close(writeQueue);
   clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+
   return NULL;
 }

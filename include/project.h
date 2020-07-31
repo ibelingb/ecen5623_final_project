@@ -43,6 +43,7 @@
 #define ACQ_THREAD_SEMA_TIMEOUT       (50e6)
 #define DIFF_THREAD_SEMA_TIMEOUT      (500e6)
 #define PROC_THREAD_SEMA_TIMEOUT      (1000e6)
+#define WRITE_THREAD_SEMA_TIMEOUT     (1000e6)
 
 typedef enum {
   ACQ_THREAD = 0,
@@ -52,7 +53,7 @@ typedef enum {
   SEQ_THREAD,
   TOTAL_THREADS
 } Thread_e;
-#define TOTAL_RT_THREADS  (TOTAL_THREADS - 2)
+#define TOTAL_RT_THREADS  (TOTAL_THREADS - 1)
 
 typedef struct {
   int cameraIdx;                              /* index of camera */

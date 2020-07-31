@@ -39,8 +39,8 @@
 #define CLOCK_TYPE CLOCK_MONOTONIC_RAW
 #define SCHED_TYPE SCHED_FIFO
 
-#define SEQ_TIMER_INTERVAL (8333333) // 120 Hz
-//#define SEQ_TIMER_INTERVAL (10000000) // 100 Hz
+#define SEQ_TIMER_INTERVAL_NSEC (8333333) // 120 Hz
+//#define SEQ_TIMER_INTERVAL_NSEC (10000000) // 100 Hz
 
 #define ACQUIRE_FRAMES_EXEC_RATE_HZ (24)
 #define DIFFERENCE_FRAMES_EXEC_RATE_HZ (2)
@@ -98,13 +98,12 @@ void sequencer(int signal) {
   if((sequenceCount % (int)SELECT_FRAMES_MOD_CALC) == 0) {
     sem_post(pProcSema);
   }
-  /*
+
   // Write Frames to memory @ 1 Hz
-  if((sequenceCount % WRITE_FRAMES_MOD_CALC) == 0) {
+  if((sequenceCount % (int)WRITE_FRAMES_MOD_CALC) == 0) {
     sem_post(pWriteSema);
-    framesSaved++;
+    framesSaved++; // TODO - Determine better way to track this
   }
-  */
 
   /* Max desired frames saved - initiate shutdown of application */
   if(framesSaved == MAX_FRAME_COUNT) {
@@ -161,9 +160,9 @@ void *sequencerTask(void *arg) {
   timer_create(CLOCK_REALTIME, NULL, &seqTimer);
   signal(SIGALRM, sequencer);
   itime.it_interval.tv_sec = 0;
-  itime.it_interval.tv_nsec = SEQ_TIMER_INTERVAL;
+  itime.it_interval.tv_nsec = SEQ_TIMER_INTERVAL_NSEC;
   itime.it_value.tv_sec = 0;
-  itime.it_value.tv_nsec = SEQ_TIMER_INTERVAL;
+  itime.it_value.tv_nsec = SEQ_TIMER_INTERVAL_NSEC;
   timer_settime(seqTimer, flags, &itime, &last_itime);
 
   // Block until released from sequencer after 1800 acquired frames

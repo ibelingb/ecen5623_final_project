@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
   }
 
   threadParams[Thread_e::WRITE_THREAD].pSema = &semas[Thread_e::WRITE_THREAD];
-  if(pthread_create(&threads[WRITE_THREAD], NULL, writeTask, (void *)&threadParams[Thread_e::WRITE_THREAD]) != 0) {
+  if(pthread_create(&threads[Thread_e::WRITE_THREAD], &thread_attr, writeTask, (void *)&threadParams[Thread_e::WRITE_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", WRITE_THREAD);
   }
 
