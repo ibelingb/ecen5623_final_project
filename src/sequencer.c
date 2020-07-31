@@ -72,7 +72,7 @@ void sequencer(int signal) {
   /* Post a semaphore for each service based on sub-rate of sequencer */
 
   // Acquire Frames @ 24 Hz
-  if((sequenceCount % 10) == 0) {
+  if((sequenceCount % 5) == 0) {
     sem_post(pAcqSema);
   }
 
