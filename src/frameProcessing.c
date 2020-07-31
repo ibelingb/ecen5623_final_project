@@ -93,6 +93,7 @@ void *processingTask(void *arg)
   
   struct timespec startTime, expireTime;
   Mat readImg, procImg;
+
   unsigned int prio;
   clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
@@ -101,7 +102,7 @@ void *processingTask(void *arg)
     clock_gettime(CLOCK_REALTIME, &expireTime);
     expireTime.tv_nsec += PROC_THREAD_SEMA_TIMEOUT;
     if(expireTime.tv_nsec > 1e9) {
-      expireTime.tv_sec += 1;
+      expireTime.tv_sec += 3;
       expireTime.tv_nsec -= 1e9;
     }
     if(sem_timedwait(threadParams.pSema, &expireTime) < 0) {

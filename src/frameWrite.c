@@ -1,5 +1,5 @@
 /***********************************************************************************
- * @author Brian Ebeling
+ * @author Brian Ibeling
  * ibelingb@colorado.edu
  * 
  * Real-time Embedded Systems

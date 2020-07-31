@@ -90,10 +90,12 @@ int main(int argc, char *argv[])
   /*---------------------------------------*/
   /* parse CLI */
   /*---------------------------------------*/
-  threadParams_t threadParams[TOTAL_THREADS];
-  for(int ind = 0; ind < TOTAL_THREADS; ++ind) {
+  threadParams_t threadParams[TOTAL_THREADS - 1];
+  seqThreadParams_t seqThreadParams;
+  for(int ind = 0; ind < TOTAL_THREADS - 1; ++ind) {
     memset(&threadParams[ind], 0, sizeof(threadParams_t));
   }
+   memset(&seqThreadParams, 0, sizeof(seqThreadParams_t));
 
   /* hough_enable */
   if((strcmp(argv[1], "on") == 0) || (strcmp(argv[1], "ON") == 0) || (strcmp(argv[1], "On") == 0) || (strcmp(argv[1], "oN") == 0)) {
@@ -225,11 +227,17 @@ int main(int argc, char *argv[])
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::PROC_THREAD);
   }
 
+  threadParams[Thread_e::WRITE_THREAD].pSema = &semas[Thread_e::WRITE_THREAD];
   if(pthread_create(&threads[WRITE_THREAD], NULL, writeTask, (void *)&threadParams[Thread_e::WRITE_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", WRITE_THREAD);
   }
 
-  if(pthread_create(&threads[SEQ_THREAD], &thread_attr, sequencerTask, (void *)&threadParams[Thread_e::SEQ_THREAD]) != 0) {
+  seqThreadParams.pAcqSema   = &semas[Thread_e::ACQ_THREAD];
+  seqThreadParams.pDiffSema  = &semas[Thread_e::DIFF_THREAD];
+  seqThreadParams.pProcSema  = &semas[Thread_e::PROC_THREAD];
+  seqThreadParams.pWriteSema = &semas[Thread_e::WRITE_THREAD];
+  seqThreadParams.pSeqSema   = &semas[Thread_e::SEQ_THREAD]; // TODO - remove?
+  if(pthread_create(&threads[SEQ_THREAD], &thread_attr, sequencerTask, (void *)&seqThreadParams) != 1) {
     syslog(LOG_ERR, "couldn't create thread#%d", SEQ_THREAD);
   }
 

@@ -17,6 +17,6 @@ SRCS += main/project.c \
 				src/frameDifference.c \
 				src/frameProcessing.c \
 				src/frameWrite.c \
-				src/sequencerJM.c
+				src/sequencer.c
 
 PLATFORM = UBUNTU
