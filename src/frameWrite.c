@@ -87,7 +87,7 @@ void *writeTask(void *arg)
   }
 
   clock_gettime(CLOCK_TYPE, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(startTime));
 	while(1) {
     /* wait for semaphore */
     clock_gettime(CLOCK_TYPE, &expireTime);

@@ -40,6 +40,7 @@ typedef struct {
   int cols;
   size_t elem_size;
 } imgDef_t;
+
 #define SELECT_QUEUE_MSG_SIZE         (sizeof(imgDef_t))
 #define SELECT_QUEUE_LENGTH           (10)
 #define WRITE_QUEUE_MSG_SIZE          (sizeof(cv::Mat))
@@ -70,6 +71,7 @@ typedef struct {
   circular_buffer<cv::Mat> *pCBuff;           /* circular buffer pointer */
   unsigned int hough_enable;                  /* enable hough transformations */
   unsigned int filter_enable;                 /* enable filtering */
+  struct timespec programStartTime;           /* start time to make times more reasonable */
 } threadParams_t;
 
 typedef struct {

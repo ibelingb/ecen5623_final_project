@@ -85,7 +85,7 @@ void *differenceTask(void *arg)
   }
   
   struct timespec startTime, sendTime, expireTime;
-  clock_gettime(CLOCK_REALTIME, &startTime);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   Mat prevFrame;
   Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
@@ -134,6 +134,9 @@ void *differenceTask(void *arg)
 
       /* if difference detected, send for processing */
       if(countNonZero(bw) > 10) {
+        clock_gettime(CLOCK_MONOTONIC, &expireTime);
+        std::string label = format("Frame time: %.2f ms", CALC_DT_MSEC(expireTime, threadParams.programStartTime));
+        putText(nextFrame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
         int len = nextFrame.rows * nextFrame.cols * nextFrame.elemSize();
         uint8_t *pixelData = (uint8_t *)malloc(len);
         memcpy(pixelData, nextFrame.data, len);
@@ -158,7 +161,7 @@ void *differenceTask(void *arg)
           }
           cout << __func__ << " error with mq_send, errno: " << errno << " [" << strerror(errno) << "]" << endl;
         } else {
-          clock_gettime(CLOCK_REALTIME, &sendTime);
+          clock_gettime(CLOCK_MONOTONIC, &sendTime);
           syslog(LOG_INFO, "%s sent image#%d at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
           ++cnt;
         }

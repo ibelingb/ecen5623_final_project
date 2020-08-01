@@ -75,12 +75,12 @@ int main(int argc, char *argv[])
 
   /* starting logging; use cat /var/log/syslog | grep project
    * to view messages */
-  openlog("project", LOG_PID | LOG_NDELAY | LOG_CONS, LOG_USER);
+  openlog("project2", LOG_PID | LOG_NDELAY | LOG_CONS, LOG_USER);
   syslog(LOG_INFO, ".");
   syslog(LOG_INFO, "..");
   syslog(LOG_INFO, "...");
   struct timespec startTime;
-  clock_gettime(CLOCK_REALTIME, &startTime);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 
   if (argc < 3) {
@@ -97,8 +97,10 @@ int main(int argc, char *argv[])
   seqThreadParams_t seqThreadParams;
   for(int ind = 0; ind < TOTAL_THREADS - 1; ++ind) {
     memset(&threadParams[ind], 0, sizeof(threadParams_t));
+    threadParams[ind].programStartTime.tv_nsec = startTime.tv_nsec;
+    threadParams[ind].programStartTime.tv_sec = startTime.tv_sec;
   }
-   memset(&seqThreadParams, 0, sizeof(seqThreadParams_t));
+  
 
   /* hough_enable */
   if((strcmp(argv[1], "on") == 0) || (strcmp(argv[1], "ON") == 0) || (strcmp(argv[1], "On") == 0) || (strcmp(argv[1], "oN") == 0)) {

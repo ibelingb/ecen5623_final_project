@@ -97,7 +97,7 @@ void *processingTask(void *arg)
   Mat readImg, procImg;
 
   unsigned int prio;
-  clock_gettime(CLOCK_REALTIME, &startTime);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   while(1) {
     /* wait for semaphore */
@@ -131,9 +131,7 @@ void *processingTask(void *arg)
         /* process image */
         syslog(LOG_INFO, "%s processing image", __func__);
         if(threadParams.filter_enable) {
-          GaussianBlur(readImg, procImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
-          // filter2D(procImg, procImg, CV_8U, kern2D);
-          // sepFilter2D(procImg, procImg, CV_8U, kern1D, kern1D);
+          sepFilter2D(procImg, procImg, CV_8U, kern1D, kern1D);
           imshow("procImg", procImg);
         } else {
           imshow("procImg", readImg);
@@ -149,7 +147,7 @@ void *processingTask(void *arg)
           }
           cout << __func__ << " error with mq_timedsend, errno: " << errno << " [" << strerror(errno) << "]" << endl;
         } else {
-          clock_gettime(CLOCK_REALTIME, &sendTime);
+          clock_gettime(CLOCK_MONOTONIC, &sendTime);
           syslog(LOG_INFO, "%s sent image#%d to writeQueue at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
           ++cnt;
         }
@@ -159,7 +157,7 @@ void *processingTask(void *arg)
 
   mq_close(selectQueue);
   mq_close(writeQueue);
-  clock_gettime(CLOCK_REALTIME, &startTime);
+  clock_gettime(CLOCK_MONOTONIC, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   return NULL;
 }

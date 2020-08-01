@@ -88,7 +88,7 @@ void *acquisitionTask(void*arg)
 
   Mat readImg;
   struct timespec readTime;
-  clock_gettime(CLOCK_REALTIME, &readTime);
+  clock_gettime(CLOCK_MONOTONIC, &readTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(readTime));
   while(1) {
     /* wait for semaphore */
@@ -109,17 +109,17 @@ void *acquisitionTask(void*arg)
     /* read image from video */
     cam >> readImg;
     if(!readImg.empty()) {
-      clock_gettime(CLOCK_REALTIME, &readTime);
+      clock_gettime(CLOCK_MONOTONIC, &readTime);
 
       /* insert in circular buffer */
       threadParams.pCBuff->put(readImg);
-      syslog(LOG_INFO, "frame acquired/inserted at: %f", TIMESPEC_TO_MSEC(readTime));
+      syslog(LOG_INFO, "frame acquired/inserted at: %.2f, dt since start: %.2f", TIMESPEC_TO_MSEC(readTime), CALC_DT_MSEC(readTime, threadParams.programStartTime));
       if(threadParams.pCBuff->full()) {
         syslog(LOG_WARNING, "circular buffer full");
       }
     }
   }
-  clock_gettime(CLOCK_REALTIME, &readTime);
+  clock_gettime(CLOCK_MONOTONIC, &readTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(readTime));
   return NULL;
 }
