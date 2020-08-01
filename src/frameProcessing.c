@@ -136,6 +136,7 @@ void *processingTask(void *arg)
           imshow("procImg", readImg);
         }
         waitKey(1);
+        free(dummy.data);
       }
     }
   }
