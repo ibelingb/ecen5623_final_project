@@ -27,6 +27,7 @@
 
 #define MAX_IMG_ROWS                  (480)
 #define MAX_IMG_COLS                  (640)
+#define MAX_FRAME_COUNT               (1800)
 
 #define TIMESPEC_TO_MSEC(time)	      ((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6))
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
@@ -49,6 +50,7 @@ typedef struct {
 #define ACQ_THREAD_SEMA_TIMEOUT       (50e6)
 #define DIFF_THREAD_SEMA_TIMEOUT      (500e6)
 #define PROC_THREAD_SEMA_TIMEOUT      (1000e6)
+#define WRITE_THREAD_SEMA_TIMEOUT     (1000e6)
 
 typedef enum {
   ACQ_THREAD = 0,
@@ -58,7 +60,7 @@ typedef enum {
   SEQ_THREAD,
   TOTAL_THREADS
 } Thread_e;
-#define TOTAL_RT_THREADS  (TOTAL_THREADS - 2)
+#define TOTAL_RT_THREADS  (TOTAL_THREADS - 1)
 
 typedef struct {
   int cameraIdx;                              /* index of camera */
@@ -69,5 +71,13 @@ typedef struct {
   unsigned int hough_enable;                  /* enable hough transformations */
   unsigned int filter_enable;                 /* enable filtering */
 } threadParams_t;
+
+typedef struct {
+  sem_t *pAcqSema;                            /* Acquire Frame semaphore */
+  sem_t *pDiffSema;                           /* Frame Difference semaphore */
+  sem_t *pProcSema;                           /* Frame Processing semaphore */
+  sem_t *pWriteSema;                          /* Frame Write semaphore */
+  sem_t *pSeqSema;                            /* Sequencer semaphore */
+} seqThreadParams_t;
 
 #endif

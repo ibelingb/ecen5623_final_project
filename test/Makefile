@@ -8,13 +8,13 @@ LIBS= -lpthread -lrt
 
 HFILES= 
 
-all: sequencer
+all: sequencer_test
 
 clean:
 	-rm -f *.o *.d
-	-rm -f sequencer
+	-rm -f sequencer_test
 
-sequencer: sequencer.o
+sequencer_test: sequencer_test.o
 	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $@.o $(LIBS)
 
 depend:
