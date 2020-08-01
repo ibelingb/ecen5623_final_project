@@ -81,7 +81,7 @@ void *processingTask(void *arg)
   }
 
   /* open handle to queue */
-  mqd_t writeQueue = mq_open(threadParams.writeQueueName, O_RDONLY, 0666, NULL);
+  mqd_t writeQueue = mq_open(threadParams.writeQueueName, O_WRONLY, 0666, NULL);
   if(writeQueue == -1) {
     syslog(LOG_ERR, "%s couldn't open queue", __func__);
     cout << __func__<< " couldn't open queue" << endl;
