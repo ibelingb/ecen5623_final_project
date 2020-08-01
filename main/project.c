@@ -51,11 +51,12 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
 #define ERROR   (-1)
+#define NUM_CPU_CORES (4)
 
 /*---------------------------------------------------------------------------------*/
 /* PRIVATE FUNCTIONS */
 
-int set_attr_policy(pthread_attr_t *attr, int policy, uint8_t priorityOffset);
+int set_attr_policy(pthread_attr_t *attr, cpu_set_t *cpuSet, int policy, uint8_t priorityOffset, int cpuCore);
 int set_main_policy(int policy, uint8_t priorityOffset);
 void print_scheduler(void);
 void usage(void);
@@ -70,6 +71,8 @@ const char *writeQueueName = "/write_mq";
 
 int main(int argc, char *argv[])
 {
+  int i;
+
   /* starting logging; use cat /var/log/syslog | grep project
    * to view messages */
   openlog("project", LOG_PID | LOG_NDELAY | LOG_CONS, LOG_USER);
@@ -203,6 +206,17 @@ int main(int argc, char *argv[])
   pthread_attr_t thread_attr;
 
   /*---------------------------------------*/
+  /* Setup CPU Affinity for threads */
+  /*---------------------------------------*/
+  cpu_set_t threadCpu;
+
+  /* Clear CPUs set */
+  CPU_ZERO(&threadCpu);
+  for (i = 0; i < NUM_CPU_CORES; i++) {
+    CPU_SET(i, &threadCpu);
+  }
+
+  /*---------------------------------------*/
   /* create threads */
   /*---------------------------------------*/
   strcpy(threadParams[Thread_e::DIFF_THREAD].selectQueueName, selectQueueName);
@@ -211,30 +225,31 @@ int main(int argc, char *argv[])
   strcpy(threadParams[Thread_e::WRITE_THREAD].writeQueueName, writeQueueName);
   pthread_t threads[TOTAL_THREADS];
 
-  set_attr_policy(&thread_attr, SCHED_FIFO, 2);
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 2, 3);
   threadParams[Thread_e::ACQ_THREAD].pSema = &semas[Thread_e::ACQ_THREAD];
   if(pthread_create(&threads[Thread_e::ACQ_THREAD], &thread_attr, acquisitionTask, (void *)&threadParams[Thread_e::ACQ_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::ACQ_THREAD);
   }
 
-  set_attr_policy(&thread_attr, SCHED_FIFO, 3);
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 3, 2);
   threadParams[Thread_e::DIFF_THREAD].pSema = &semas[Thread_e::DIFF_THREAD];
   if(pthread_create(&threads[Thread_e::DIFF_THREAD], &thread_attr, differenceTask, (void *)&threadParams[Thread_e::DIFF_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::DIFF_THREAD);
   }
 
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 3, 2);
   threadParams[Thread_e::PROC_THREAD].pSema = &semas[Thread_e::PROC_THREAD];
   if(pthread_create(&threads[Thread_e::PROC_THREAD], &thread_attr, processingTask, (void *)&threadParams[Thread_e::PROC_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::PROC_THREAD);
   }
 
-  set_attr_policy(&thread_attr, SCHED_FIFO, 4);
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 4, 1);
   threadParams[Thread_e::WRITE_THREAD].pSema = &semas[Thread_e::WRITE_THREAD];
   if(pthread_create(&threads[Thread_e::WRITE_THREAD], &thread_attr, writeTask, (void *)&threadParams[Thread_e::WRITE_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", WRITE_THREAD);
   }
 
-  set_attr_policy(&thread_attr, SCHED_FIFO, 1);
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 1, 4);
   seqThreadParams.pAcqSema   = &semas[Thread_e::ACQ_THREAD];
   seqThreadParams.pDiffSema  = &semas[Thread_e::DIFF_THREAD];
   seqThreadParams.pProcSema  = &semas[Thread_e::PROC_THREAD];
@@ -296,7 +311,7 @@ void print_scheduler(void)
   }
 }
 
-int set_attr_policy(pthread_attr_t *attr, int policy, uint8_t priorityOffset)
+int set_attr_policy(pthread_attr_t *attr, cpu_set_t *cpuSet, int policy, uint8_t priorityOffset, int cpuCore)
 {
   struct sched_param param;
   int rtnCode = 0;
@@ -323,6 +338,10 @@ int set_attr_policy(pthread_attr_t *attr, int policy, uint8_t priorityOffset)
   rtnCode |= pthread_attr_setschedpolicy(attr, policy);
 
   param.sched_priority = sched_get_priority_max(policy) - priorityOffset;
+
+  CPU_SET(cpuCore, cpuSet);
+  rtnCode |= pthread_attr_setaffinity_np(attr, sizeof(cpu_set_t), cpuSet);
+
   rtnCode |= pthread_attr_setschedparam(attr, &param);
   if (rtnCode) {
     printf("ERROR: set_attr_policy, errno: %s\n", strerror(errno));

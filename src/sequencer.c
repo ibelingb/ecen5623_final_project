@@ -1,17 +1,21 @@
-/* ECEN5623 - Real-Time Embedded Systems
- * Brian Ibeling
- * 7/25/2020
- * sequencer.c
+/***********************************************************************************
+ * @author Brian Ibeling
+ * ibelingb@colorado.edu
+ * 
+ * Real-time Embedded Systems
+ * ECEN5623 - Sam Siewert
+ * @date 25Jul2020
+ * Ubuntu 18.04 LTS and RPi 3B+
+ ************************************************************************************
  *
- * TODO
+ * @file frameWrite.c
+ * @brief 
  *
+ ************************************************************************************
  * References and Resources:
  *   - http://ecee.colorado.edu/~ecen5623/ecen/ex/Linux/sequencer_generic/seqgen3.c
+ ************************************************************************************
  */
-/*------------------------------------------------------------------------*/
-// This is necessary for CPU affinity macros in Linux
-//#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -49,8 +53,7 @@
 
 #define ACQUIRE_FRAMES_MOD_CALC (120 / ACQUIRE_FRAMES_EXEC_RATE_HZ)
 #define DIFFERENCE_FRAMES_MOD_CALC (120 / DIFFERENCE_FRAMES_EXEC_RATE_HZ)
-#define SELECT_FRAMES_MOD_CALC (120 / SELECT_FRAMES_EXEC_RATE_HZ)
-#define WRITE_FRAMES_MOD_CALC (120 / WRITE_FRAMES_EXEC_RATE_HZ)
+#define SELECT_WRITE_FRAMES_MOD_CALC (120 / SELECT_FRAMES_EXEC_RATE_HZ)
 
 /*------------------------------------------------------------------------*/
 static unsigned long long sequenceCount = 0;
@@ -95,19 +98,17 @@ void sequencer(int signal) {
   }
 
   // Process frame images @ 1 Hz
-  if((sequenceCount % (int)SELECT_FRAMES_MOD_CALC) == 0) {
-    sem_post(pProcSema);
-  }
-
   // Write Frames to memory @ 1 Hz
-  if((sequenceCount % (int)WRITE_FRAMES_MOD_CALC) == 0) {
+  // Additionally check if max number of frames saved
+  if((sequenceCount % (int)SELECT_WRITE_FRAMES_MOD_CALC) == 0) {
+    sem_post(pProcSema);
     sem_post(pWriteSema);
     framesSaved++; // TODO - Determine better way to track this
-  }
 
-  /* Max desired frames saved (Plus 1 for kickoff of threads) - initiate shutdown of application */
-  if(framesSaved == MAX_FRAME_COUNT + 1) {
-    sem_post(&appCompleteSem);
+    /* Max desired frames saved (Plus 1 for kickoff of threads) - initiate shutdown of application */
+    if (framesSaved == MAX_FRAME_COUNT + 1) {
+      sem_post(&appCompleteSem);
+    }
   }
 }
 
