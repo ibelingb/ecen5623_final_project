@@ -105,8 +105,8 @@ void sequencer(int signal) {
     framesSaved++; // TODO - Determine better way to track this
   }
 
-  /* Max desired frames saved - initiate shutdown of application */
-  if(framesSaved == MAX_FRAME_COUNT) {
+  /* Max desired frames saved (Plus 1 for kickoff of threads) - initiate shutdown of application */
+  if(framesSaved == MAX_FRAME_COUNT + 1) {
     sem_post(&appCompleteSem);
   }
 }

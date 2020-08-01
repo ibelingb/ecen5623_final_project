@@ -201,7 +201,6 @@ int main(int argc, char *argv[])
   set_main_policy(SCHED_FIFO, 0);
   print_scheduler();
   pthread_attr_t thread_attr;
-  set_attr_policy(&thread_attr, SCHED_FIFO, 1);
 
   /*---------------------------------------*/
   /* create threads */
@@ -210,13 +209,15 @@ int main(int argc, char *argv[])
   strcpy(threadParams[Thread_e::PROC_THREAD].selectQueueName, selectQueueName);
   strcpy(threadParams[Thread_e::PROC_THREAD].writeQueueName, writeQueueName);
   strcpy(threadParams[Thread_e::WRITE_THREAD].writeQueueName, writeQueueName);
-
   pthread_t threads[TOTAL_THREADS];
+
+  set_attr_policy(&thread_attr, SCHED_FIFO, 2);
   threadParams[Thread_e::ACQ_THREAD].pSema = &semas[Thread_e::ACQ_THREAD];
   if(pthread_create(&threads[Thread_e::ACQ_THREAD], &thread_attr, acquisitionTask, (void *)&threadParams[Thread_e::ACQ_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::ACQ_THREAD);
   }
 
+  set_attr_policy(&thread_attr, SCHED_FIFO, 3);
   threadParams[Thread_e::DIFF_THREAD].pSema = &semas[Thread_e::DIFF_THREAD];
   if(pthread_create(&threads[Thread_e::DIFF_THREAD], &thread_attr, differenceTask, (void *)&threadParams[Thread_e::DIFF_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::DIFF_THREAD);
@@ -227,11 +228,13 @@ int main(int argc, char *argv[])
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::PROC_THREAD);
   }
 
+  set_attr_policy(&thread_attr, SCHED_FIFO, 4);
   threadParams[Thread_e::WRITE_THREAD].pSema = &semas[Thread_e::WRITE_THREAD];
   if(pthread_create(&threads[Thread_e::WRITE_THREAD], &thread_attr, writeTask, (void *)&threadParams[Thread_e::WRITE_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", WRITE_THREAD);
   }
 
+  set_attr_policy(&thread_attr, SCHED_FIFO, 1);
   seqThreadParams.pAcqSema   = &semas[Thread_e::ACQ_THREAD];
   seqThreadParams.pDiffSema  = &semas[Thread_e::DIFF_THREAD];
   seqThreadParams.pProcSema  = &semas[Thread_e::PROC_THREAD];
