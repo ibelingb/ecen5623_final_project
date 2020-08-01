@@ -47,6 +47,7 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
+#define CLOCK_TYPE CLOCK_REALTIME
 
 /*---------------------------------------------------------------------------------*/
 /* PRIVATE FUNCTIONS */
@@ -62,6 +63,7 @@ void *writeTask(void *arg)
   unsigned int prio;
   Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
   struct timespec startTime, expireTime;
+  imgDef_t queueData;
 
   /* get thread parameters */
   if(arg == NULL) {
@@ -84,11 +86,11 @@ void *writeTask(void *arg)
     return NULL;
   }
 
-  clock_gettime(CLOCK_REALTIME, &startTime);
+  clock_gettime(CLOCK_TYPE, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 	while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &expireTime);
+    clock_gettime(CLOCK_TYPE, &expireTime);
     expireTime.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
     if(expireTime.tv_nsec > 1e9) {
       expireTime.tv_sec += 1;
@@ -103,7 +105,7 @@ void *writeTask(void *arg)
     }
 
     /* Read Frame from writeQueue */
-    if(mq_receive(writeQueue, (char *)&img, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
+    if(mq_receive(writeQueue, (char *)&queueData, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
       if (errno == EAGAIN) {
         syslog(LOG_INFO, "%s - No frame available from writeQueue", __func__);
         continue;
@@ -111,25 +113,30 @@ void *writeTask(void *arg)
         syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
       }
     } else {
-      if (img.empty() || (img.rows == 0) || (img.cols == 0)) {
+      if ((queueData.rows == 0) || (queueData.cols == 0)) {
         syslog(LOG_ERR, "%s received bad frame: empty = %d, rows = %d, cols = %d", __func__, img.empty(), img.rows, img.cols);
       } else {
+        /* convert received data into Mat object */
+        Mat receivedImg(Size(queueData.cols, queueData.rows), queueData.type, queueData.data);
+
         /* Save frame to memory */
-        sprintf(filename, "f%d_filt%d_hough%d.jpg", frameNum, threadParams.filter_enable, threadParams.hough_enable);
+        sprintf(filename, "./f%d_filt%d_hough%d.jpg", frameNum, threadParams.filter_enable, threadParams.hough_enable);
 
         // TODO - do we need to write timestamp and platform info here? Or is that being added to image directly?
 
         // Write frame to output file
         syslog(LOG_INFO, "%s frame %s saved", __func__, filename);
-        imwrite(filename, img);
+        imwrite(filename, receivedImg);
         ++frameNum;
       }
 	  }
+    // TODO - Free this here??
+    free(queueData.data);
 	}
 
   /* Thread exit - cleanup */
   mq_close(writeQueue);
-  clock_gettime(CLOCK_REALTIME, &startTime);
+  clock_gettime(CLOCK_TYPE, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 
   return NULL;

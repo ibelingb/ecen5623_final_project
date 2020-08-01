@@ -139,11 +139,10 @@ void *processingTask(void *arg)
           imshow("procImg", readImg);
         }
         waitKey(1);
-        free(dummy.data);
 
         /* Send frame to fraemWrite via writeQueue */
         clock_gettime(CLOCK_REALTIME, &expireTime);
-        if(mq_timedsend(writeQueue, (char *)&procImg, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
+        if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
           /* don't print if queue was empty */
           if(errno != ETIMEDOUT) {
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
