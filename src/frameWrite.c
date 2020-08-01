@@ -58,10 +58,10 @@ using namespace std;
 void *writeTask(void *arg)
 {
   char filename[80];
-  uint16_t frameNum = 0;
+  unsigned int frameNum = 0;
+  unsigned int prio;
   Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
   struct timespec startTime, expireTime;
-  unsigned int prio;
 
   /* get thread parameters */
   if(arg == NULL) {
@@ -115,7 +115,6 @@ void *writeTask(void *arg)
         syslog(LOG_ERR, "%s received bad frame: empty = %d, rows = %d, cols = %d", __func__, img.empty(), img.rows, img.cols);
       } else {
         /* Save frame to memory */
-        frameNum++;
         sprintf(filename, "f%d_filt%d_hough%d.jpg", frameNum, threadParams.filter_enable, threadParams.hough_enable);
 
         // TODO - do we need to write timestamp and platform info here? Or is that being added to image directly?
@@ -123,10 +122,12 @@ void *writeTask(void *arg)
         // Write frame to output file
         syslog(LOG_INFO, "%s frame %s saved", __func__, filename);
         imwrite(filename, img);
+        ++frameNum;
       }
 	  }
 	}
 
+  /* Thread exit - cleanup */
   mq_close(writeQueue);
   clock_gettime(CLOCK_REALTIME, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));

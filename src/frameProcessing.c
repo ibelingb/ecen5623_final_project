@@ -60,6 +60,8 @@ using namespace std;
 /*---------------------------------------------------------------------------------*/
 void *processingTask(void *arg)
 {  
+  unsigned int cnt = 0;
+
   /* get thread parameters */
   if(arg == NULL) {
     syslog(LOG_ERR, "ERROR: invalid arg provided to %s", __func__);
@@ -91,7 +93,7 @@ void *processingTask(void *arg)
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   Mat kern2D = kern1D * kern1D.t();
   
-  struct timespec startTime, expireTime;
+  struct timespec startTime, sendTime, expireTime;
   Mat readImg, procImg;
 
   unsigned int prio;
@@ -133,6 +135,20 @@ void *processingTask(void *arg)
           // GaussianBlur(procImg, procImg, Size(FILTER_SIZE, FILTER_SIZE), FILTER_SIGMA);
           // filter2D(procImg, procImg, CV_8U, kern2D);
           // sepFilter2D(procImg, procImg, CV_8U, kern1D, kern1D);
+        }
+
+        /* Send frame to fraemWrite via writeQueue */
+        clock_gettime(CLOCK_REALTIME, &expireTime);
+        if(mq_timedsend(writeQueue, (char *)&procImg, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
+          /* don't print if queue was empty */
+          if(errno != ETIMEDOUT) {
+            syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
+          }
+          cout << __func__ << " error with mq_timedsend, errno: " << errno << " [" << strerror(errno) << "]" << endl;
+        } else {
+          clock_gettime(CLOCK_REALTIME, &sendTime);
+          syslog(LOG_INFO, "%s sent image#%d to writeQueue at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+          ++cnt;
         }
       }
     }
