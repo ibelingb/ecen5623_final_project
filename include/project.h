@@ -42,10 +42,10 @@ typedef struct {
 } imgDef_t;
 
 #define SELECT_QUEUE_MSG_SIZE         (sizeof(imgDef_t))
-#define SELECT_QUEUE_LENGTH           (25)
+#define SELECT_QUEUE_LENGTH           (13)
 #define WRITE_QUEUE_MSG_SIZE          (sizeof(cv::Mat))
-#define WRITE_QUEUE_LENGTH            (25)
-#define CIRCULAR_BUFF_LEN             (25)
+#define WRITE_QUEUE_LENGTH            (50)
+#define CIRCULAR_BUFF_LEN             (13)
 
 /* for synchronization */
 #define ACQ_THREAD_SEMA_TIMEOUT       (50e6)

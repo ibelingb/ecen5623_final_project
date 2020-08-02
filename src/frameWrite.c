@@ -103,34 +103,38 @@ void *writeTask(void *arg)
     }
 
     /* Read Frame from writeQueue */
-    if(mq_receive(writeQueue, (char *)&queueData, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
-      if (errno == EAGAIN) {
-        syslog(LOG_INFO, "%s - No frame available from writeQueue", __func__);
-        continue;
-      } else if(errno != EAGAIN) {
-        syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
-      }
-    } else {
-      if ((queueData.rows == 0) || (queueData.cols == 0)) {
-        syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, queueData.rows, queueData.cols);
+    uint8_t emptyFlag = 0;
+    do {
+      if(mq_receive(writeQueue, (char *)&queueData, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
+        if (errno == EAGAIN) {
+          syslog(LOG_INFO, "%s - No frame available from writeQueue", __func__);
+          emptyFlag = 1;
+          continue;
+        } else if(errno != EAGAIN) {
+          syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
+        }
       } else {
-        /* convert received data into Mat object */
-        Mat receivedImg(Size(queueData.cols, queueData.rows), queueData.type, queueData.data);
+        if ((queueData.rows == 0) || (queueData.cols == 0)) {
+          syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, queueData.rows, queueData.cols);
+        } else {
+          /* convert received data into Mat object */
+          Mat receivedImg(Size(queueData.cols, queueData.rows), queueData.type, queueData.data);
 
-        /* Save frame to memory */
-        sprintf(filename, "./f%d_filt%d_hough%d.jpg", frameNum, threadParams.filter_enable, threadParams.hough_enable);
+          /* Save frame to memory */
+          sprintf(filename, "./f%d_filt%d_hough%d.jpg", frameNum, threadParams.filter_enable, threadParams.hough_enable);
 
-        // TODO - do we need to write timestamp and platform info here? Or is that being added to image directly?
+          // TODO - do we need to write timestamp and platform info here? Or is that being added to image directly?
 
-        // Write frame to output file
-        imwrite(filename, receivedImg);
-        clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
-        syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, frameNum, TIMESPEC_TO_MSEC(readTime));
-        ++frameNum;
+          // Write frame to output file
+          imwrite(filename, receivedImg);
+          clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
+          syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, frameNum, TIMESPEC_TO_MSEC(readTime));
+          ++frameNum;
+        }
+        // I think it goes here, meaning if you get a frame clean up
+        free(queueData.data);
       }
-	  }
-    // TODO - Free this here??
-    free(queueData.data);
+    } while(!emptyFlag);
 	}
 
   /* Thread exit - cleanup */

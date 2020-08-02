@@ -158,8 +158,8 @@ void *differenceTask(void *arg)
         if(mq_timedsend(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
             if(errno == ETIMEDOUT) {
               cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
-              free(dummy.data);
-            } 
+            }
+            free(dummy.data);
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
         } else {
           clock_gettime(CLOCK_MONOTONIC, &sendTime);
