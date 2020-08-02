@@ -156,20 +156,23 @@ void *differenceTask(void *arg)
       /* if a difference was found, take the next
        * frame to ensure the hands are stationary */
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-      if((countNonZero(bw) > 100) && (CALC_DT_MSEC(timeNow, lastDetectTime) > 500)) {
+      //if((countNonZero(bw) > 100) && (CALC_DT_MSEC(timeNow, lastDetectTime) > 500)) {
+      if(countNonZero(bw) > 100) {
         skipNextCnt = 5;
-      }
-      while(skipNextCnt != 0)
-      {
-        if(threadParams.pCBuff->empty()) {
-          cout << "not enough frame in CB!" << endl;
+      
+        while(skipNextCnt != 0) {
+          if(threadParams.pCBuff->empty()) {
+            cout << "not enough frame in CB!" << endl;
+            break;
+          }
+          nextFrame = threadParams.pCBuff->get();
+          --skipNextCnt;
+        }
+        if(skipNextCnt != 0) {
           break;
         }
-        nextFrame = threadParams.pCBuff->get();
-        --skipNextCnt;
-      }
 
-      if((skipNextCnt == 0) && (!threadParams.pCBuff->empty())) {
+      //if((skipNextCnt == 0) && (!threadParams.pCBuff->empty())) {
         nextFrame = threadParams.pCBuff->get();
         if(nextFrame.empty()) {
           cout << "not enough frame in CB!" << endl;
