@@ -88,11 +88,11 @@ void *acquisitionTask(void*arg)
 
   Mat readImg;
   struct timespec timeNow, prevReadTime;
-  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &timeNow);
+    clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += ACQ_THREAD_SEMA_TIMEOUT;
     if(timeNow.tv_nsec  > 1e9) {
       timeNow.tv_sec += 1;
@@ -109,7 +109,7 @@ void *acquisitionTask(void*arg)
     /* read image from video */
     cam >> readImg;
     if(!readImg.empty()) {
-      clock_gettime(CLOCK_MONOTONIC, &timeNow);
+      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
 
       /* insert in circular buffer */
       threadParams.pCBuff->put(readImg);
@@ -123,7 +123,7 @@ void *acquisitionTask(void*arg)
       }
     }
   }
-  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   return NULL;
 }

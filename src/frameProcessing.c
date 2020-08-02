@@ -93,11 +93,11 @@ void *processingTask(void *arg)
 
   unsigned int prio;
   unsigned int timeoutCnt = 0;
-  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &timeNow);
+    clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += PROC_THREAD_SEMA_TIMEOUT;
     if(timeNow.tv_nsec > 1e9) {
       timeNow.tv_sec += 1;
@@ -187,7 +187,7 @@ void *processingTask(void *arg)
           waitKey(1);
 
           /* Send frame to frameWrite via writeQueue */
-          clock_gettime(CLOCK_REALTIME, &timeNow);
+          clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
           if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {
             if(errno == ETIMEDOUT) {
               cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
@@ -195,7 +195,7 @@ void *processingTask(void *arg)
             free(dummy.data);
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
           } else {
-            clock_gettime(CLOCK_MONOTONIC, &sendTime);
+            clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
             syslog(LOG_INFO, "%s sent/inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, dummy.diffFrameNum,
             CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
             ++cnt;
@@ -209,7 +209,7 @@ void *processingTask(void *arg)
 
   mq_close(selectQueue);
   mq_close(writeQueue);
-  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   return NULL;
 }

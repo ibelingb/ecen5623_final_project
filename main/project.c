@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
   syslog(LOG_INFO, "..");
   syslog(LOG_INFO, "...");
   struct timespec startTime;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 
   if (argc < 4) {
