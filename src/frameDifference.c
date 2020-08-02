@@ -163,15 +163,15 @@ void *differenceTask(void *arg)
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
         } else {
           clock_gettime(CLOCK_MONOTONIC, &sendTime);
-          syslog(LOG_INFO, "%s sent/inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,
+          syslog(LOG_INFO, "%s sent/inserted frame#%d to selectQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,
             CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
+          prevSendTime.tv_sec = sendTime.tv_sec;
+          prevSendTime.tv_nsec = prevSendTime.tv_nsec;
           ++cnt;
         }
       }
       /* store old frame */
       nextFrame.copyTo(prevFrame);
-      prevSendTime.tv_sec = sendTime.tv_sec;
-      prevSendTime.tv_nsec = prevSendTime.tv_nsec;
     }
 	}
   mq_close(selectQueue);

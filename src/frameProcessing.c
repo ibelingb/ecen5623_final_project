@@ -133,7 +133,6 @@ void *processingTask(void *arg)
           Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
 
           /* process image */
-          syslog(LOG_INFO, "%s processing image", __func__);
           if(threadParams.filter_enable) {
             sepFilter2D(readImg, readImg, CV_8U, kern1D, kern1D);
           }
