@@ -89,7 +89,7 @@ void *differenceTask(void *arg)
   /* create filter kernel */
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   
-  struct timespec timeNow, sendTime, lastDetectTime;
+  struct timespec timeNow, sendTime;
   #if defined(DT_SYSLOG_OUTPUT)
   struct timespec prevSendTime;
   #endif
@@ -135,6 +135,7 @@ void *differenceTask(void *arg)
         cout << "ERROR: nextFrame empty still!" << endl;
         continue;
       }
+
       Mat nextFrame;
       cvtColor(readFrame, nextFrame, COLOR_RGB2GRAY);
 
@@ -151,10 +152,9 @@ void *differenceTask(void *arg)
       /* if a difference was found, take the next
        * frame to ensure the hands are stationary */
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-      //if((countNonZero(bw) > 100) && (CALC_DT_MSEC(timeNow, lastDetectTime) > 500)) {
       if(countNonZero(bw) > 100) {
-        skipNextCnt = 5;
-      
+        skipNextCnt = 1;
+
         while(skipNextCnt != 0) {
           if(threadParams.pCBuff->empty()) {
             cout << "not enough frame in CB!" << endl;
@@ -166,14 +166,6 @@ void *differenceTask(void *arg)
         if(skipNextCnt != 0) {
           break;
         }
-
-      //if((skipNextCnt == 0) && (!threadParams.pCBuff->empty())) {
-        nextFrame = threadParams.pCBuff->get();
-        if(nextFrame.empty()) {
-          cout << "not enough frame in CB!" << endl;
-          continue;
-        }
-        clock_gettime(SYSLOG_CLOCK_TYPE, &lastDetectTime);
         cvtColor(nextFrame, nextFrame, COLOR_RGB2GRAY);
 
         if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
