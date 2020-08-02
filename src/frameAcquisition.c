@@ -118,12 +118,15 @@ void *acquisitionTask(void*arg)
     if((!readImg.empty()) && (++readCnt > FRAMES_TO_SKIP)) {
       readCnt = FRAMES_TO_SKIP;
 
+      // sprintf(filename, "./f%d_filt%d_hough%d.ppm", dummy.diffFrameNum, threadParams.filter_enable, threadParams.hough_enable);
+      // imwrite(filename, receivedImg);
+
       /* insert in circular buffer */
       threadParams.pCBuff->put(readImg);
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
 
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-      syslog(LOG_INFO, "%s inserted frame to CircBuffer at:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+      syslog(LOG_INFO, "%s frame inserted to CircBuffer at:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
       syslog(LOG_INFO, "%s frame inserted to CB, dt since start: %.2f ms, dt since last frame: %.2f ms", __func__,

@@ -157,16 +157,17 @@ void *differenceTask(void *arg)
       while(skipNextCnt != 0)
       {
         if(threadParams.pCBuff->empty()) {
+          cout << "not enough frame in CB!" << endl;
           break;
         }
         nextFrame = threadParams.pCBuff->get();
         --skipNextCnt;
       }
 
-      if((skipNextCnt == 0) && threadParams.pCBuff->empty()) {
+      if((skipNextCnt == 0) && (!threadParams.pCBuff->empty())) {
         nextFrame = threadParams.pCBuff->get();
         if(nextFrame.empty()) {
-          cout << "ERROR: nextFrame empty still!" << endl;
+          cout << "not enough frame in CB!" << endl;
           continue;
         }
         clock_gettime(SYSLOG_CLOCK_TYPE, &lastDetectTime);
