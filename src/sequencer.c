@@ -40,7 +40,6 @@
 #define NANOSEC_PER_MSEC (1000000)
 #define NANOSEC_PER_SEC (1000000000)
 
-#define CLOCK_TYPE CLOCK_MONOTONIC_RAW
 #define SCHED_TYPE SCHED_FIFO
 
 #define SEQ_TIMER_INTERVAL_NSEC (8333333) // 120 Hz
@@ -72,7 +71,7 @@ sem_t *pSeqSema; // TODO - remove?
 double getTimeMsec(void) {
   struct timespec event_ts = {0, 0};
 
-  clock_gettime(CLOCK_TYPE, &event_ts);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &event_ts);
   return ((event_ts.tv_sec) * 1000.0) + ((event_ts.tv_nsec) / 1000000.0);
 }
 

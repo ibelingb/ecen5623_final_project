@@ -53,6 +53,10 @@ typedef struct {
 #define PROC_THREAD_SEMA_TIMEOUT      (1000e6)
 #define WRITE_THREAD_SEMA_TIMEOUT     (1000e6)
 
+/* Clock Types */
+#define SEMA_CLOCK_TYPE (CLOCK_REALTIME)
+#define SYSLOG_CLOCK_TYPE (CLOCK_MONOTONIC)
+
 typedef enum {
   ACQ_THREAD = 0,
   DIFF_THREAD,

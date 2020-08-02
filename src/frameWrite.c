@@ -47,7 +47,6 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
-#define CLOCK_TYPE CLOCK_REALTIME
 
 /*---------------------------------------------------------------------------------*/
 /* PRIVATE FUNCTIONS */
@@ -86,11 +85,11 @@ void *writeTask(void *arg)
     return NULL;
   }
 
-  clock_gettime(CLOCK_TYPE, &startTime);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(startTime));
 	while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_TYPE, &expireTime);
+    clock_gettime(SEMA_CLOCK_TYPE, &expireTime);
     expireTime.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
     if(expireTime.tv_nsec > 1e9) {
       expireTime.tv_sec += 1;
@@ -136,7 +135,7 @@ void *writeTask(void *arg)
 
   /* Thread exit - cleanup */
   mq_close(writeQueue);
-  clock_gettime(CLOCK_TYPE, &startTime);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 
   return NULL;
