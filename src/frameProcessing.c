@@ -136,7 +136,7 @@ void *processingTask(void *arg)
 
           /* add edge enhancement */
           if(threadParams.filter_enable) {
-            int thres = 80;
+            int thres = 70;
             Canny(procImg, procImg, thres, thres*4, 3);
           }
 
@@ -144,7 +144,13 @@ void *processingTask(void *arg)
           if(threadParams.hough_enable) {
             /* find lines */
             vector<Vec4i> linesP;
-            HoughLinesP(procImg, linesP, 1, CV_PI/180, 80, 80, 10);
+            HoughLinesP(procImg,  // grayscale input image
+                linesP,           // output vector of lines
+                1,                // distance resolution
+                CV_PI/180,        // angle resolution
+                80,               // score threshold
+                80,               // minimum length
+                20);              // maximum allowed gap
             cout << "num lines: " << linesP.size() << std::endl;
             
             /* Draw the lines */
