@@ -154,10 +154,9 @@ void *processingTask(void *arg)
             for( size_t i = 0; i < linesP.size(); i++ )
             {
                 Vec4i l = linesP[i];
-                line(readImg, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(255, 255, 255), 5, LINE_AA);
+                line(readImg, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 5, LINE_AA);
             }
           }
-          imshow("procImg", procImg);
           imshow("readImg", readImg);
           waitKey(1);
 

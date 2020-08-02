@@ -140,6 +140,8 @@ void *writeTask(void *arg)
           // TODO - do we need to write timestamp and platform info here? Or is that being added to image directly?
 
           // Write frame to output file
+          std::string label = format("Frame time: %.2f ms", queueData.diffFrameTime);
+          putText(receivedImg, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
           imwrite(filename, receivedImg);
 
           if(threadParams.save_type != SaveType_e::SAVE_COLOR_IMAGE) {

@@ -155,8 +155,6 @@ void *differenceTask(void *arg)
           nextFrame.copyTo(newTimeFrame);
         }
         clock_gettime(CLOCK_MONOTONIC, &timeNow);
-        std::string label = format("Frame time: %.2f ms", CALC_DT_MSEC(timeNow, threadParams.programStartTime));
-        putText(newTimeFrame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
         int len = newTimeFrame.rows * newTimeFrame.cols * newTimeFrame.elemSize();
         uint8_t *pixelData = (uint8_t *)malloc(len);
         memcpy(pixelData, newTimeFrame.data, len);
@@ -171,6 +169,7 @@ void *differenceTask(void *arg)
                             .cols = newTimeFrame.cols, 
                             .elem_size = newTimeFrame.elemSize(),
                             .diffFrameNum = cnt,
+                            .diffFrameTime = CALC_DT_MSEC(timeNow, threadParams.programStartTime),
                             .isColor = (threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE)};
 
         /* try to insert image but don't block if full

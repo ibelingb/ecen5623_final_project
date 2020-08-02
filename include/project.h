@@ -29,7 +29,7 @@
 #define MAX_IMG_COLS                  (640)
 #define MAX_FRAME_COUNT               (1800)
 
-#define TIMESPEC_TO_MSEC(time)	      ((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6))
+#define TIMESPEC_TO_MSEC(time)	      ((float)((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6)))
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
 
 /* for queues */
@@ -40,6 +40,7 @@ typedef struct {
   int cols;
   size_t elem_size;
   unsigned int diffFrameNum;
+  float diffFrameTime;
   uint8_t isColor;
 } imgDef_t;
 
@@ -68,7 +69,6 @@ typedef enum {
   TOTAL_THREADS
 } Thread_e;
 #define TOTAL_RT_THREADS  (TOTAL_THREADS - 1)
-
 
 typedef enum {
   SAVE_COLOR_IMAGE = 0,
