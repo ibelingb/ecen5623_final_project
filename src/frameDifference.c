@@ -89,7 +89,11 @@ void *differenceTask(void *arg)
   /* create filter kernel */
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   
-  struct timespec timeNow, prevSendTime, sendTime;
+  struct timespec timeNow, sendTime;
+  #if defined(DT_SYSLOG_OUTPUT)
+  struct timespec prevSendTime;
+  #endif
+
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   Mat prevFrame;
@@ -183,10 +187,16 @@ void *differenceTask(void *arg)
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
         } else {
           clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
-          syslog(LOG_INFO, "%s sent/inserted frame#%d to selectQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,
-            CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
+
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+          syslog(LOG_INFO, "%s inserted frame#%d to selectQueue at:, %.2f, ms", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+#endif
+#if defined(DT_SYSLOG_OUTPUT)
+          syslog(LOG_INFO, "%s inserted frame#%d to selectQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,
+                 CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
           prevSendTime.tv_sec = sendTime.tv_sec;
           prevSendTime.tv_nsec = sendTime.tv_nsec;
+#endif
           ++cnt;
         }
       }

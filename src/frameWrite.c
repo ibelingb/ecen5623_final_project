@@ -62,14 +62,16 @@ using namespace std;
 void *writeTask(void *arg)
 {
   char filename[80];
-  unsigned int frameNum = 0;
   uint8_t emptyFlag = 0;
   unsigned int prio;
-  struct timespec timeNow;
-  imgDef_t queueData;
+  imgDef_t dummy;
   std::string timestamp;
   std::string procName;
   struct utsname unameData;
+  struct timespec timeNow, saveTime;
+#if defined(DT_SYSLOG_OUTPUT)
+  struct timespec prevSaveTime;
+#endif 
 
   /* get thread parameters */
   if(arg == NULL) {
@@ -126,27 +128,27 @@ void *writeTask(void *arg)
     /* Read Frame from writeQueue */
     emptyFlag = 0;
     do {
-      if(mq_receive(writeQueue, (char *)&queueData, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
+      if(mq_receive(writeQueue, (char *)&dummy, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
         if (errno == EAGAIN) {
-          syslog(LOG_INFO, "%s - No frame available from writeQueue", __func__);
+          //syslog(LOG_INFO, "%s - No frame available from writeQueue", __func__);
           emptyFlag = 1;
           continue;
         } else if(errno != EAGAIN) {
           syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
         }
       } else {
-        if ((queueData.rows == 0) || (queueData.cols == 0)) {
-          syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, queueData.rows, queueData.cols);
+        if ((dummy.rows == 0) || (dummy.cols == 0)) {
+          syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, dummy.rows, dummy.cols);
         } else {
-          /* convert received data into Mat object */
-          Mat receivedImg(Size(queueData.cols, queueData.rows), queueData.type, queueData.data);
+          /* Convert received data into Mat object */
+          Mat receivedImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
 
           /* Save frame to memory */
-          sprintf(filename, "./f%d_filt%d_hough%d.jpg", frameNum, threadParams.filter_enable, threadParams.hough_enable);
+          sprintf(filename, "./f%d_filt%d_hough%d.jpg", dummy.diffFrameNum, threadParams.filter_enable, threadParams.hough_enable);
 
-          // Write frame to output file
+          /* Add timestamp and uname to frame and write frame to output file */
           uname(&unameData);
-          timestamp = format("Frame time: %.2f ms", queueData.diffFrameTime);
+          timestamp = format("Frame time: %.2f ms", dummy.diffFrameTime);
           procName = format("uname: %s", unameData.sysname);
           putText(receivedImg, timestamp, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
           putText(receivedImg, procName, Point(0, 30), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
@@ -157,12 +159,19 @@ void *writeTask(void *arg)
           }
           writer.write(receivedImg);
           
-          clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-          syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, queueData.diffFrameNum, TIMESPEC_TO_MSEC(timeNow));
-          ++frameNum;
+          clock_gettime(SYSLOG_CLOCK_TYPE, &saveTime);
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+          syslog(LOG_INFO, "%s frame#%d saved at:, %.2f, ms", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(saveTime));
+#endif
+#if defined(DT_SYSLOG_OUTPUT)
+          syslog(LOG_INFO, "%s frame#%d saved, dt since start: %.2f ms, dt since last frame saved: %.2f ms", __func__, dummy.diffFrameNum,
+                 CALC_DT_MSEC(saveTime, threadParams.programStartTime), CALC_DT_MSEC(saveTime, prevSaveTime));
+          prevSaveTime.tv_sec = saveTime.tv_sec;
+          prevSaveTime.tv_nsec = saveTime.tv_nsec;
+#endif
         }
-        // I think it goes here, meaning if you get a frame clean up
-        free(queueData.data);
+        /* free malloced data */
+        free(dummy.data);
       }
     } while(!emptyFlag);
 	}

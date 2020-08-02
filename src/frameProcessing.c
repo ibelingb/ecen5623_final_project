@@ -88,7 +88,10 @@ void *processingTask(void *arg)
     return NULL;
   }
   
-  struct timespec timeNow, sendTime, prevSendTime;
+  struct timespec timeNow, sendTime;
+#if defined(DT_SYSLOG_OUTPUT)
+  struct timespec prevSendTime;
+#endif
   Mat readImg, procImg;
 
   unsigned int prio;
@@ -202,11 +205,16 @@ void *processingTask(void *arg)
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
           } else {
             clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
-            syslog(LOG_INFO, "%s sent/inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, dummy.diffFrameNum,
-            CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
-            ++cnt;
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+            syslog(LOG_INFO, "%s inserted frame#%d to writeQueue at:,  %.2f, ms", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(sendTime));
+#endif
+#if defined(DT_SYSLOG_OUTPUT)
+            syslog(LOG_INFO, "%s inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, dummy.diffFrameNum,
+                   CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
             prevSendTime.tv_sec = sendTime.tv_sec;
             prevSendTime.tv_nsec = sendTime.tv_nsec;
+#endif
+            ++cnt;
           }
         }
       }
