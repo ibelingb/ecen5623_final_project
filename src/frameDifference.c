@@ -137,9 +137,7 @@ void *differenceTask(void *arg)
       Mat diffFrame = nextFrame - prevFrame;
       
       /* process image */
-      if(threadParams.filter_enable) {
-        sepFilter2D(diffFrame, diffFrame, CV_8U, kern1D, kern1D);
-      }
+      sepFilter2D(diffFrame, diffFrame, CV_8U, kern1D, kern1D);
   
       /* convert to binary */
       Mat bw;

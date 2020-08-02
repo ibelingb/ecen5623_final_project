@@ -126,10 +126,42 @@ void *processingTask(void *arg)
           syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, dummy.rows, dummy.cols);
         } else {
           Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
-          imshow("procImg", readImg);
+
+          if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
+            cvtColor(readImg, procImg, COLOR_RGB2GRAY);
+          } else {
+            procImg = readImg.clone();
+          }
+
+          /* add edge enhancement */
+          if(threadParams.filter_enable) {
+            int thres = 80;
+            Canny(readImg, procImg, thres, thres*4, 3);
+          }
+
+          /* Draw the lines */
+          if(threadParams.hough_enable) {
+            /* find lines */
+            vector<Vec4i> linesP;
+            HoughLinesP(procImg, linesP, 1, CV_PI/180, 80, 80, 10);
+            cout << "num lines: " << linesP.size() << std::endl;
+            
+            /* Draw the lines */
+            if(threadParams.save_type != SaveType_e::SAVE_COLOR_IMAGE) {
+              cvtColor(procImg, procImg, COLOR_GRAY2RGB);
+            }
+            
+            for( size_t i = 0; i < linesP.size(); i++ )
+            {
+                Vec4i l = linesP[i];
+                line(readImg, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(255, 255, 255), 5, LINE_AA);
+            }
+          }
+          imshow("procImg", procImg);
+          imshow("readImg", readImg);
           waitKey(1);
 
-          /* Send frame to fraemWrite via writeQueue */
+          /* Send frame to frameWrite via writeQueue */
           clock_gettime(CLOCK_REALTIME, &timeNow);
           if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {
             if(errno == ETIMEDOUT) {

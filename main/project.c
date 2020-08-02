@@ -118,10 +118,10 @@ int main(int argc, char *argv[])
   /* filter_enable */
   ++argIndex;
   if((strcmp(argv[argIndex], "on") == 0) || (strcmp(argv[argIndex], "ON") == 0) || (strcmp(argv[argIndex], "On") == 0) || (strcmp(argv[argIndex], "oN") == 0)) {
-    threadParams[Thread_e::DIFF_THREAD].filter_enable = 1;
+    threadParams[Thread_e::PROC_THREAD].filter_enable = 1;
   } else if((strcmp(argv[argIndex], "off") == 0) || (strcmp(argv[argIndex], "OFF") == 0) || (strcmp(argv[argIndex], "Off") == 0) || (strcmp(argv[argIndex], "oFF") == 0) ||
             (strcmp(argv[argIndex], "oFf") == 0) || (strcmp(argv[argIndex], "OfF") == 0) || (strcmp(argv[argIndex], "OFf") == 0) || (strcmp(argv[argIndex], "ofF") == 0)) {
-    threadParams[Thread_e::DIFF_THREAD].filter_enable = 0;
+    threadParams[Thread_e::PROC_THREAD].filter_enable = 0;
   } else {
     syslog(LOG_ERR, "invalid filter_enable provided");
     cout  << "invalid 'filter_enable' parameter provided\n\n";
@@ -132,6 +132,7 @@ int main(int argc, char *argv[])
   /* save type */
   ++argIndex;
   threadParams[Thread_e::DIFF_THREAD].save_type = (SaveType_e)(atoi(argv[argIndex]) % SaveType_e::SAVE_TYPE_END);
+  threadParams[Thread_e::PROC_THREAD].save_type = (SaveType_e)(atoi(argv[argIndex]) % SaveType_e::SAVE_TYPE_END);
   threadParams[Thread_e::WRITE_THREAD].save_type = (SaveType_e)(atoi(argv[argIndex]) % SaveType_e::SAVE_TYPE_END);
   
   /* todo: get from CLI */
