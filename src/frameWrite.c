@@ -12,6 +12,8 @@
  * @brief 
  *
  ************************************************************************************
+ * References/Resources Used:
+ *  - https://stackoverflow.com/questions/3596310/c-how-to-use-the-function-uname
  */
 
 /*---------------------------------------------------------------------------------*/
@@ -28,6 +30,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <sys/utsname.h>
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
@@ -60,9 +63,13 @@ void *writeTask(void *arg)
 {
   char filename[80];
   unsigned int frameNum = 0;
+  uint8_t emptyFlag = 0;
   unsigned int prio;
-  struct timespec readTime;
+  struct timespec timeNow;
   imgDef_t queueData;
+  std::string timestamp;
+  std::string procName;
+  struct utsname unameData;
 
   /* get thread parameters */
   if(arg == NULL) {
@@ -98,17 +105,17 @@ void *writeTask(void *arg)
     cout << "failed to open video writer" << std::endl;
   }
 
-  clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
-  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(readTime));
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(timeNow));
 	while(1) {
     /* wait for semaphore */
-    clock_gettime(SEMA_CLOCK_TYPE, &readTime);
-    readTime.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
-    if(readTime.tv_nsec > 1e9) {
-      readTime.tv_sec += 1;
-      readTime.tv_nsec -= 1e9;
+    clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
+    timeNow.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
+    if(timeNow.tv_nsec > 1e9) {
+      timeNow.tv_sec += 1;
+      timeNow.tv_nsec -= 1e9;
     }
-    if(sem_timedwait(threadParams.pSema, &readTime) < 0) {
+    if(sem_timedwait(threadParams.pSema, &timeNow) < 0) {
       if(errno != ETIMEDOUT) {
         syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
       } else {
@@ -117,7 +124,7 @@ void *writeTask(void *arg)
     }
 
     /* Read Frame from writeQueue */
-    uint8_t emptyFlag = 0;
+    emptyFlag = 0;
     do {
       if(mq_receive(writeQueue, (char *)&queueData, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
         if (errno == EAGAIN) {
@@ -137,11 +144,12 @@ void *writeTask(void *arg)
           /* Save frame to memory */
           sprintf(filename, "./f%d_filt%d_hough%d.jpg", frameNum, threadParams.filter_enable, threadParams.hough_enable);
 
-          // TODO - do we need to write timestamp and platform info here? Or is that being added to image directly?
-
           // Write frame to output file
-          std::string label = format("Frame time: %.2f ms", queueData.diffFrameTime);
-          putText(receivedImg, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
+          uname(&unameData);
+          timestamp = format("Frame time: %.2f ms", queueData.diffFrameTime);
+          procName = format("uname: %s", unameData.sysname);
+          putText(receivedImg, timestamp, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
+          putText(receivedImg, procName, Point(0, 30), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
           imwrite(filename, receivedImg);
 
           if(threadParams.save_type != SaveType_e::SAVE_COLOR_IMAGE) {
@@ -149,8 +157,8 @@ void *writeTask(void *arg)
           }
           writer.write(receivedImg);
           
-          clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
-          syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, queueData.diffFrameNum, TIMESPEC_TO_MSEC(readTime));
+          clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+          syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, queueData.diffFrameNum, TIMESPEC_TO_MSEC(timeNow));
           ++frameNum;
         }
         // I think it goes here, meaning if you get a frame clean up
@@ -161,8 +169,8 @@ void *writeTask(void *arg)
 
   /* Thread exit - cleanup */
   mq_close(writeQueue);
-  clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
-  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(readTime));
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
 
   return NULL;
 }

@@ -90,7 +90,7 @@ void *differenceTask(void *arg)
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   
   struct timespec timeNow, prevSendTime, sendTime;
-  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   Mat prevFrame;
   Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
@@ -98,7 +98,7 @@ void *differenceTask(void *arg)
   unsigned int timeoutCnt = 0;
 	while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &timeNow);
+    clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += DIFF_THREAD_SEMA_TIMEOUT;
     if(timeNow.tv_nsec > 1e9) {
       timeNow.tv_sec += 1;
@@ -154,7 +154,7 @@ void *differenceTask(void *arg)
         } else {
           nextFrame.copyTo(newTimeFrame);
         }
-        clock_gettime(CLOCK_MONOTONIC, &timeNow);
+        clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
         int len = newTimeFrame.rows * newTimeFrame.cols * newTimeFrame.elemSize();
         uint8_t *pixelData = (uint8_t *)malloc(len);
         memcpy(pixelData, newTimeFrame.data, len);
@@ -174,7 +174,7 @@ void *differenceTask(void *arg)
 
         /* try to insert image but don't block if full
         * so that we loop around and just get the newest */
-        clock_gettime(CLOCK_REALTIME, &timeNow);
+        clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
         if(mq_timedsend(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {
             if(errno == ETIMEDOUT) {
               cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
@@ -182,7 +182,7 @@ void *differenceTask(void *arg)
             free(dummy.data);
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
         } else {
-          clock_gettime(CLOCK_MONOTONIC, &sendTime);
+          clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
           syslog(LOG_INFO, "%s sent/inserted frame#%d to selectQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,
             CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
           prevSendTime.tv_sec = sendTime.tv_sec;
@@ -195,7 +195,7 @@ void *differenceTask(void *arg)
     }
 	}
   mq_close(selectQueue);
-  clock_gettime(CLOCK_REALTIME, &timeNow);
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   return NULL;
 }
