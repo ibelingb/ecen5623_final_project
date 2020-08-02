@@ -87,18 +87,18 @@ void *acquisitionTask(void*arg)
   }
 
   Mat readImg;
-  struct timespec readTime;
-  clock_gettime(CLOCK_MONOTONIC, &readTime);
-  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(readTime));
+  struct timespec timeNow, prevReadTime;
+  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &readTime);
-    readTime.tv_nsec += ACQ_THREAD_SEMA_TIMEOUT;
-    if(readTime.tv_nsec  > 1e9) {
-      readTime.tv_sec += 1;
-      readTime.tv_nsec -= 1e9;
+    clock_gettime(CLOCK_REALTIME, &timeNow);
+    timeNow.tv_nsec += ACQ_THREAD_SEMA_TIMEOUT;
+    if(timeNow.tv_nsec  > 1e9) {
+      timeNow.tv_sec += 1;
+      timeNow.tv_nsec -= 1e9;
     }
-    if(sem_timedwait(threadParams.pSema, &readTime) < 0) {
+    if(sem_timedwait(threadParams.pSema, &timeNow) < 0) {
       if(errno != ETIMEDOUT) {
         syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
       } else {
@@ -109,17 +109,21 @@ void *acquisitionTask(void*arg)
     /* read image from video */
     cam >> readImg;
     if(!readImg.empty()) {
-      clock_gettime(CLOCK_MONOTONIC, &readTime);
+      clock_gettime(CLOCK_MONOTONIC, &timeNow);
 
       /* insert in circular buffer */
       threadParams.pCBuff->put(readImg);
-      syslog(LOG_INFO, "frame acquired/inserted at: %.2f, dt since start: %.2f", TIMESPEC_TO_MSEC(readTime), CALC_DT_MSEC(readTime, threadParams.programStartTime));
+      syslog(LOG_INFO, "frame acquired/inserted, dt since start: %.2f ms, dt since last frame: %.2f ms", 
+      CALC_DT_MSEC(timeNow, threadParams.programStartTime), CALC_DT_MSEC(timeNow, prevReadTime));
       if(threadParams.pCBuff->full()) {
         syslog(LOG_WARNING, "circular buffer full");
+      } else {
+        prevReadTime.tv_sec = timeNow.tv_sec;
+        prevReadTime.tv_nsec = timeNow.tv_nsec;
       }
     }
   }
-  clock_gettime(CLOCK_MONOTONIC, &readTime);
-  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(readTime));
+  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   return NULL;
 }

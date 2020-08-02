@@ -97,6 +97,7 @@ void *processingTask(void *arg)
   Mat readImg, procImg;
 
   unsigned int prio;
+  unsigned int timeoutCnt = 0;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   while(1) {
@@ -117,42 +118,44 @@ void *processingTask(void *arg)
 
     /* read oldest, highest priority msg from the message queue */
     imgDef_t dummy;
-    if(mq_receive(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
-      /* don't print if queue was empty */
-      if(errno != EAGAIN) {
-        syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
-      }
-    } else {
-      if ((dummy.rows == 0) || (dummy.cols == 0)) {
-        syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, dummy.rows, dummy.cols);
+    uint8_t emptyFlag = 0;
+    do {
+      if(mq_receive(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
+        if(errno != EAGAIN) {
+          syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
+        } else {
+          emptyFlag = 1;
+        }
       } else {
-        Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
-
-        /* process image */
-        syslog(LOG_INFO, "%s processing image", __func__);
-        if(threadParams.filter_enable) {
-          sepFilter2D(procImg, procImg, CV_8U, kern1D, kern1D);
-          imshow("procImg", procImg);
+        if ((dummy.rows == 0) || (dummy.cols == 0)) {
+          syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, dummy.rows, dummy.cols);
         } else {
-          imshow("procImg", readImg);
-        }
-        waitKey(1);
+          Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
 
-        /* Send frame to fraemWrite via writeQueue */
-        clock_gettime(CLOCK_REALTIME, &expireTime);
-        if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
-          /* don't print if queue was empty */
-          if(errno != ETIMEDOUT) {
-            syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
+          /* process image */
+          syslog(LOG_INFO, "%s processing image", __func__);
+          if(threadParams.filter_enable) {
+            sepFilter2D(readImg, readImg, CV_8U, kern1D, kern1D);
           }
-          cout << __func__ << " error with mq_timedsend, errno: " << errno << " [" << strerror(errno) << "]" << endl;
-        } else {
-          clock_gettime(CLOCK_MONOTONIC, &sendTime);
-          syslog(LOG_INFO, "%s sent image#%d to writeQueue at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
-          ++cnt;
+          imshow("procImg", readImg);
+          waitKey(1);
+
+          /* Send frame to fraemWrite via writeQueue */
+          clock_gettime(CLOCK_REALTIME, &expireTime);
+          if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
+            if(errno == ETIMEDOUT) {
+              cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
+              free(dummy.data);
+            } 
+            syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
+          } else {
+            clock_gettime(CLOCK_MONOTONIC, &sendTime);
+            syslog(LOG_INFO, "%s sent image#%d to writeQueue at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+            ++cnt;
+          }
         }
       }
-    }
+    } while(!emptyFlag);
   }
 
   mq_close(selectQueue);

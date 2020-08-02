@@ -89,6 +89,7 @@ void *differenceTask(void *arg)
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
   Mat prevFrame;
   Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
+  unsigned int timeoutCnt = 0;
 	while(1) {
     /* wait for semaphore */
     clock_gettime(CLOCK_REALTIME, &expireTime);
@@ -155,11 +156,11 @@ void *differenceTask(void *arg)
         * so that we loop around and just get the newest */
         clock_gettime(CLOCK_REALTIME, &expireTime);
         if(mq_timedsend(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
-          /* don't print if queue was empty */
-          if(errno != ETIMEDOUT) {
-            syslog(LOG_ERR, "%s error with mq_send, errno: %d [%s]", __func__, errno, strerror(errno));
-          }
-          cout << __func__ << " error with mq_send, errno: " << errno << " [" << strerror(errno) << "]" << endl;
+            if(errno == ETIMEDOUT) {
+              cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
+              free(dummy.data);
+            } 
+            syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
         } else {
           clock_gettime(CLOCK_MONOTONIC, &sendTime);
           syslog(LOG_INFO, "%s sent image#%d at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
