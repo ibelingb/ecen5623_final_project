@@ -87,7 +87,11 @@ void *acquisitionTask(void*arg)
   }
 
   Mat readImg;
-  struct timespec timeNow, prevReadTime;
+  struct timespec timeNow;
+#if defined(DT_SYSLOG_OUTPUT)
+  struct timespec prevReadTime;
+#endif
+
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   while(1) {
@@ -109,17 +113,21 @@ void *acquisitionTask(void*arg)
     /* read image from video */
     cam >> readImg;
     if(!readImg.empty()) {
-      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-
       /* insert in circular buffer */
       threadParams.pCBuff->put(readImg);
-      syslog(LOG_INFO, "%s acquired/inserted into CB, dt since start: %.2f ms, dt since last frame: %.2f ms", __func__,
-      CALC_DT_MSEC(timeNow, threadParams.programStartTime), CALC_DT_MSEC(timeNow, prevReadTime));
+      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+      syslog(LOG_INFO, "%s frame inserted to CircBuffer at:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
+#if defined(DT_SYSLOG_OUTPUT)
+      syslog(LOG_INFO, "%s frame inserted to CB, dt since start: %.2f ms, dt since last frame: %.2f ms", __func__,
+             CALC_DT_MSEC(timeNow, threadParams.programStartTime), CALC_DT_MSEC(timeNow, prevReadTime));
+      prevReadTime.tv_sec = timeNow.tv_sec;
+      prevReadTime.tv_nsec = timeNow.tv_nsec;
+#endif
       if(threadParams.pCBuff->full()) {
-        syslog(LOG_WARNING, "circular buffer full");
-      } else {
-        prevReadTime.tv_sec = timeNow.tv_sec;
-        prevReadTime.tv_nsec = timeNow.tv_nsec;
+        syslog(LOG_WARNING, "%s CB is full!", __func__);
       }
     }
   }
