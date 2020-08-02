@@ -96,6 +96,7 @@ void *differenceTask(void *arg)
   Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
   Mat newTimeFrame;
   unsigned int timeoutCnt = 0;
+  uint8_t takeNext = 0;
 	while(1) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
@@ -143,8 +144,21 @@ void *differenceTask(void *arg)
       Mat bw;
       threshold(diffFrame, bw, 20, 255, THRESH_BINARY);
 
-      /* if difference detected, send for processing */
+      /* if a difference was found, take the next
+       * frame to ensure the hands are stationary */
       if(countNonZero(bw) > 100) {
+        takeNext = 1;
+      }
+
+      if(takeNext && (!threadParams.pCBuff->empty())) {
+        nextFrame = threadParams.pCBuff->get();
+        if(nextFrame.empty()) {
+          cout << "ERROR: nextFrame empty still!" << endl;
+          continue;
+        }
+        takeNext = 0;
+        cvtColor(nextFrame, nextFrame, COLOR_RGB2GRAY);
+
         if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
           readFrame.copyTo(newTimeFrame);
         } else if (threadParams.save_type == SaveType_e::SAVE_DIFF_IMAGE) {
