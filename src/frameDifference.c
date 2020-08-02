@@ -89,7 +89,7 @@ void *differenceTask(void *arg)
   /* create filter kernel */
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   
-  struct timespec timeNow, sendTime;
+  struct timespec timeNow, sendTime, lastDetectTime;
   #if defined(DT_SYSLOG_OUTPUT)
   struct timespec prevSendTime;
   #endif
@@ -100,7 +100,7 @@ void *differenceTask(void *arg)
   Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
   Mat newTimeFrame;
   unsigned int timeoutCnt = 0;
-  uint8_t takeNext = 0;
+  uint8_t skipNextCnt = 0;
 	while(1) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
@@ -150,17 +150,26 @@ void *differenceTask(void *arg)
 
       /* if a difference was found, take the next
        * frame to ensure the hands are stationary */
-      if(countNonZero(bw) > 100) {
-        takeNext = 1;
+      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+      if((countNonZero(bw) > 100) && (CALC_DT_MSEC(timeNow, lastDetectTime) > 500)) {
+        skipNextCnt = 5;
+      }
+      while(skipNextCnt != 0)
+      {
+        if(threadParams.pCBuff->empty()) {
+          break;
+        }
+        nextFrame = threadParams.pCBuff->get();
+        --skipNextCnt;
       }
 
-      if(takeNext && (!threadParams.pCBuff->empty())) {
+      if((skipNextCnt == 0) && threadParams.pCBuff->empty()) {
         nextFrame = threadParams.pCBuff->get();
         if(nextFrame.empty()) {
           cout << "ERROR: nextFrame empty still!" << endl;
           continue;
         }
-        takeNext = 0;
+        clock_gettime(SYSLOG_CLOCK_TYPE, &lastDetectTime);
         cvtColor(nextFrame, nextFrame, COLOR_RGB2GRAY);
 
         if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
