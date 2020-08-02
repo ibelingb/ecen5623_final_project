@@ -89,6 +89,7 @@ void *differenceTask(void *arg)
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   Mat prevFrame;
   Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
+  Mat newTimeFrame;
   unsigned int timeoutCnt = 0;
 	while(1) {
     /* wait for semaphore */
@@ -119,38 +120,49 @@ void *differenceTask(void *arg)
     /* continue as long as there's frames in buffer */
     while(!threadParams.pCBuff->empty())
     {
-      Mat nextFrame = threadParams.pCBuff->get();
-      if(nextFrame.empty()) {
+      Mat readFrame = threadParams.pCBuff->get();
+      if(readFrame.empty()) {
         cout << "ERROR: nextFrame empty still!" << endl;
         continue;
       }
-      cvtColor(nextFrame, nextFrame, COLOR_RGB2GRAY);
+      Mat nextFrame;
+      cvtColor(readFrame, nextFrame, COLOR_RGB2GRAY);
 
       /* find difference */
       Mat diffFrame = nextFrame - prevFrame;
       
       /* convert to binary */
       Mat bw;
-      threshold(diffFrame, bw, 50, 255, THRESH_BINARY);
+      threshold(diffFrame, bw, 20, 255, THRESH_BINARY);
 
       /* if difference detected, send for processing */
-      if(countNonZero(bw) > 10) {
+      if(countNonZero(bw) > 100) {
+        if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
+          readFrame.copyTo(newTimeFrame);
+        } else if (threadParams.save_type == SaveType_e::SAVE_DIFF_IMAGE) {
+          diffFrame.copyTo(newTimeFrame);
+        } else if (threadParams.save_type == SaveType_e::SAVE_THRES_IMAGE) {
+          bw.copyTo(newTimeFrame);
+        } else {
+          nextFrame.copyTo(newTimeFrame);
+        }
         clock_gettime(CLOCK_MONOTONIC, &timeNow);
         std::string label = format("Frame time: %.2f ms", CALC_DT_MSEC(timeNow, threadParams.programStartTime));
-        putText(nextFrame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-        int len = nextFrame.rows * nextFrame.cols * nextFrame.elemSize();
+        putText(newTimeFrame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
+        int len = newTimeFrame.rows * newTimeFrame.cols * newTimeFrame.elemSize();
         uint8_t *pixelData = (uint8_t *)malloc(len);
-        memcpy(pixelData, nextFrame.data, len);
+        memcpy(pixelData, newTimeFrame.data, len);
 
         /* this is a really ugly way to do this but I didn't 
          * know how to get around the ref count / auto-memory
          * managment of C++; thought about using STL container instead
          * but MQs is what we learned in class */
         imgDef_t dummy = {  .data = pixelData, 
-                            .type = nextFrame.type(), 
-                            .rows = nextFrame.rows, 
-                            .cols = nextFrame.cols, 
-                            .elem_size = nextFrame.elemSize() };
+                            .type = newTimeFrame.type(), 
+                            .rows = newTimeFrame.rows, 
+                            .cols = newTimeFrame.cols, 
+                            .elem_size = newTimeFrame.elemSize(),
+                            .diffFrameNum = cnt};
 
         /* try to insert image but don't block if full
         * so that we loop around and just get the newest */

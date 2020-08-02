@@ -128,7 +128,7 @@ void *writeTask(void *arg)
           // Write frame to output file
           imwrite(filename, receivedImg);
           clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
-          syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, frameNum, TIMESPEC_TO_MSEC(readTime));
+          syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, queueData.diffFrameNum, TIMESPEC_TO_MSEC(readTime));
           ++frameNum;
         }
         // I think it goes here, meaning if you get a frame clean up

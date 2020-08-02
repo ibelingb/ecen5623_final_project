@@ -103,10 +103,11 @@ int main(int argc, char *argv[])
   
 
   /* hough_enable */
-  if((strcmp(argv[1], "on") == 0) || (strcmp(argv[1], "ON") == 0) || (strcmp(argv[1], "On") == 0) || (strcmp(argv[1], "oN") == 0)) {
+  int argIndex = 1;
+  if((strcmp(argv[argIndex], "on") == 0) || (strcmp(argv[argIndex], "ON") == 0) || (strcmp(argv[argIndex], "On") == 0) || (strcmp(argv[argIndex], "oN") == 0)) {
     threadParams[Thread_e::PROC_THREAD].hough_enable = 1;
-  } else if((strcmp(argv[1], "off") == 0) || (strcmp(argv[1], "OFF") == 0) || (strcmp(argv[1], "Off") == 0) || (strcmp(argv[1], "oFF") == 0) ||
-            (strcmp(argv[1], "oFf") == 0) || (strcmp(argv[1], "OfF") == 0) || (strcmp(argv[1], "OFf") == 0) || (strcmp(argv[1], "ofF") == 0)) {
+  } else if((strcmp(argv[argIndex], "off") == 0) || (strcmp(argv[argIndex], "OFF") == 0) || (strcmp(argv[argIndex], "Off") == 0) || (strcmp(argv[argIndex], "oFF") == 0) ||
+            (strcmp(argv[argIndex], "oFf") == 0) || (strcmp(argv[argIndex], "OfF") == 0) || (strcmp(argv[argIndex], "OFf") == 0) || (strcmp(argv[argIndex], "ofF") == 0)) {
     threadParams[Thread_e::PROC_THREAD].hough_enable = 0;
   } else {
     syslog(LOG_ERR, "invalid hough_enable provided");
@@ -115,10 +116,11 @@ int main(int argc, char *argv[])
     return -1;
   }
   /* filter_enable */
-  if((strcmp(argv[2], "on") == 0) || (strcmp(argv[1], "ON") == 0) || (strcmp(argv[1], "On") == 0) || (strcmp(argv[1], "oN") == 0)) {
+  ++argIndex;
+  if((strcmp(argv[argIndex], "on") == 0) || (strcmp(argv[argIndex], "ON") == 0) || (strcmp(argv[argIndex], "On") == 0) || (strcmp(argv[argIndex], "oN") == 0)) {
     threadParams[Thread_e::PROC_THREAD].filter_enable = 1;
-  } else if((strcmp(argv[2], "off") == 0) || (strcmp(argv[2], "OFF") == 0) || (strcmp(argv[2], "Off") == 0) || (strcmp(argv[2], "oFF") == 0) ||
-            (strcmp(argv[2], "oFf") == 0) || (strcmp(argv[2], "OfF") == 0) || (strcmp(argv[2], "OFf") == 0) || (strcmp(argv[2], "ofF") == 0)) {
+  } else if((strcmp(argv[argIndex], "off") == 0) || (strcmp(argv[argIndex], "OFF") == 0) || (strcmp(argv[argIndex], "Off") == 0) || (strcmp(argv[argIndex], "oFF") == 0) ||
+            (strcmp(argv[argIndex], "oFf") == 0) || (strcmp(argv[argIndex], "OfF") == 0) || (strcmp(argv[argIndex], "OFf") == 0) || (strcmp(argv[argIndex], "ofF") == 0)) {
     threadParams[Thread_e::PROC_THREAD].filter_enable = 0;
   } else {
     syslog(LOG_ERR, "invalid filter_enable provided");
@@ -126,6 +128,10 @@ int main(int argc, char *argv[])
     usage();
     return -1;
   }
+
+  /* save type */
+  ++argIndex;
+  threadParams[Thread_e::DIFF_THREAD].save_type = (SaveType_e)(atoi(argv[argIndex]) % SaveType_e::SAVE_TYPE_END);
   
   /* todo: get from CLI */
   threadParams[Thread_e::ACQ_THREAD].cameraIdx = 0;

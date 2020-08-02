@@ -39,6 +39,7 @@ typedef struct {
   int rows;
   int cols;
   size_t elem_size;
+  unsigned int diffFrameNum;
 } imgDef_t;
 
 #define SELECT_QUEUE_MSG_SIZE         (sizeof(imgDef_t))
@@ -67,6 +68,15 @@ typedef enum {
 } Thread_e;
 #define TOTAL_RT_THREADS  (TOTAL_THREADS - 1)
 
+
+typedef enum {
+  SAVE_COLOR_IMAGE = 0,
+  SAVE_BW_IMAGE,
+  SAVE_DIFF_IMAGE,
+  SAVE_THRES_IMAGE,
+  SAVE_TYPE_END
+} SaveType_e;
+
 typedef struct {
   int cameraIdx;                              /* index of camera */
   sem_t *pSema;                               /* semaphore */
@@ -75,6 +85,7 @@ typedef struct {
   circular_buffer<cv::Mat> *pCBuff;           /* circular buffer pointer */
   unsigned int hough_enable;                  /* enable hough transformations */
   unsigned int filter_enable;                 /* enable filtering */
+  SaveType_e save_type;                       /* type of frame to pass through the pipeline */
   struct timespec programStartTime;           /* start time to make times more reasonable */
 } threadParams_t;
 
