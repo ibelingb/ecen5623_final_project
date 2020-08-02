@@ -157,32 +157,30 @@ void *processingTask(void *arg)
                 Vec4i l = linesP[i];
                 line(readImg, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 5, LINE_AA);
             }
-          }
 
-          /* draw circles */
-          medianBlur(gray, gray, 5);
-          vector<Vec3f> circles;
-          HoughCircles(gray, circles, 
-                      HOUGH_GRADIENT, // method
-                      1,              // dp inverse accumulator resolution
-                      gray.rows/4,    // min distance between centers of detected circles
-                      100,            // high threshold
-                      30,             // low threshold
-                      100,             // min. circle radius
-                      200             // max. circle radius
-                  // (min_radius & max_radius) to detect larger circles
-          );
-          cout << "num circles: " << circles.size() << std::endl;
+            /* draw circles */
+            medianBlur(gray, gray, 5);
+            vector<Vec3f> circles;
+            HoughCircles(gray, circles, 
+                        HOUGH_GRADIENT, // method
+                        1,              // dp inverse accumulator resolution
+                        gray.rows/4,    // min distance between centers of detected circles
+                        100,            // high threshold
+                        30,             // low threshold
+                        100,            // min. circle radius
+                        200             // max. circle radius
+            );
+            cout << "num circles: " << circles.size() << std::endl;
 
-          for( size_t i = 0; i < circles.size(); i++ )
-          {
-              Vec3i c = circles[i];
-              Point center = Point(c[0], c[1]);
-              // circle center
-              circle( readImg, center, 1, Scalar(255,0, 0), 3, LINE_AA);
-              // circle outline
-              int radius = c[2];
-              circle( readImg, center, radius, Scalar(255,0,0), 3, LINE_AA);
+            for( size_t i = 0; i < circles.size(); i++ )
+            {
+                Vec3i c = circles[i];
+                Point center = Point(c[0], c[1]);
+                circle( readImg, center, 1, Scalar(255,0, 0), 3, LINE_AA);
+
+                int radius = c[2];
+                circle( readImg, center, radius, Scalar(255,0,0), 3, LINE_AA);
+            }
           }
 
           imshow("readImg", readImg);
