@@ -154,7 +154,6 @@ void *processingTask(void *arg)
                 80,               // score threshold
                 80,               // minimum length
                 20);              // maximum allowed gap
-            cout << "num lines: " << linesP.size() << std::endl;
             
             /* Draw the lines */
             if(threadParams.save_type != SaveType_e::SAVE_COLOR_IMAGE) {
@@ -179,7 +178,6 @@ void *processingTask(void *arg)
                         140,            // min. circle radius
                         250             // max. circle radius
             );
-            cout << "num circles: " << circles.size() << std::endl;
 
             for( size_t i = 0; i < circles.size(); i++ )
             {
