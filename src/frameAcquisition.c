@@ -123,7 +123,7 @@ void *acquisitionTask(void*arg)
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
 
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-      syslog(LOG_INFO, "%s frame inserted to CircBuffer at:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+      syslog(LOG_INFO, "%s inserted frame to CircBuffer at:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
       syslog(LOG_INFO, "%s frame inserted to CB, dt since start: %.2f ms, dt since last frame: %.2f ms", __func__,
