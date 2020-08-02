@@ -111,6 +111,11 @@ void *acquisitionTask(void*arg)
       }
     }
 
+    clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+    syslog(LOG_INFO, "%s frame received at:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
+
     /* read image from video */
     cam >> readImg;
 
@@ -123,9 +128,9 @@ void *acquisitionTask(void*arg)
 
       /* insert in circular buffer */
       threadParams.pCBuff->put(readImg);
-      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
 
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
+      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       syslog(LOG_INFO, "%s frame inserted to CircBuffer at:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
