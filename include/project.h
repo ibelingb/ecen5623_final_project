@@ -33,6 +33,8 @@
 #define MAX_IMG_ROWS                  (480)
 #define MAX_IMG_COLS                  (640)
 #define MAX_FRAME_COUNT               (1800)
+#define TIME_TO_SKIP_MSEC             (1000)
+#define FRAMES_TO_SKIP                ((unsigned int)((TIME_TO_SKIP_MSEC * 24)/1000))
 
 #define TIMESPEC_TO_MSEC(time)	      ((float)((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6)))
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
