@@ -117,6 +117,11 @@ void *differenceTask(void *arg)
       }
     }
 
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+    clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+    syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
+
     /* if this is the first time through, fill previous frame */
     if(prevFrame.empty() && !threadParams.pCBuff->empty()) {
       prevFrame = threadParams.pCBuff->get();
@@ -205,10 +210,10 @@ void *differenceTask(void *arg)
             free(dummy.data);
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
         } else {
-          clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
 
+          clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-          syslog(LOG_INFO, "%s inserted frame#%d to selectQueue at:, %.2f, ms", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+          syslog(LOG_INFO, "%s frame #%d inserted to selectQueue at:, %.2f, ms", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
           syslog(LOG_INFO, "%s inserted frame#%d to selectQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,

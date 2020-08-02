@@ -114,6 +114,11 @@ void *processingTask(void *arg)
       }
     }
 
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+    clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+    syslog(LOG_INFO, "%s frame process start:,  %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
+
     /* read oldest, highest priority msg from the message queue */
     imgDef_t dummy;
     uint8_t emptyFlag = 0;
@@ -204,7 +209,7 @@ void *processingTask(void *arg)
           } else {
             clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-            syslog(LOG_INFO, "%s inserted frame#%d to writeQueue at:,  %.2f, ms", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(sendTime));
+            syslog(LOG_INFO, "%s frame #%d inserted to writeQueue at:,  %.2f, ms", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(sendTime));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
             syslog(LOG_INFO, "%s inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, dummy.diffFrameNum,

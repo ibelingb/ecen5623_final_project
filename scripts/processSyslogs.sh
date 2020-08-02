@@ -10,7 +10,7 @@ fi
 mkdir $1
 cat /var/log/syslog | grep "project\[$1\]" > $1/syslog_$1.txt
 
-cat $1/syslog_$1.txt | grep "acquisitionTask inserted frame" > $1/acqThread_$1.txt &
-cat $1/syslog_$1.txt | grep "differenceTask inserted frame" > $1/diffThread_$1.txt &
-cat $1/syslog_$1.txt | grep "processingTask inserted frame" > $1/procThread_$1.txt &
-cat $1/syslog_$1.txt | grep "writeTask saved frame" > $1/writeThread_$1.txt &
+cat $1/syslog_$1.txt | grep "acquisitionTask frame" > $1/acqThread_$1.txt &
+cat $1/syslog_$1.txt | grep "differenceTask frame" > $1/diffThread_$1.txt &
+cat $1/syslog_$1.txt | grep "processingTask frame" > $1/procThread_$1.txt &
+cat $1/syslog_$1.txt | grep "writeTask frame" > $1/writeThread_$1.txt &
