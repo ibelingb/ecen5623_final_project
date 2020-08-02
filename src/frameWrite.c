@@ -60,8 +60,7 @@ void *writeTask(void *arg)
   char filename[80];
   unsigned int frameNum = 0;
   unsigned int prio;
-  Mat img = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC3);
-  struct timespec startTime, expireTime;
+  struct timespec readTime;
   imgDef_t queueData;
 
   /* get thread parameters */
@@ -85,17 +84,17 @@ void *writeTask(void *arg)
     return NULL;
   }
 
-  clock_gettime(SYSLOG_CLOCK_TYPE, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(startTime));
+  clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(readTime));
 	while(1) {
     /* wait for semaphore */
-    clock_gettime(SEMA_CLOCK_TYPE, &expireTime);
-    expireTime.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
-    if(expireTime.tv_nsec > 1e9) {
-      expireTime.tv_sec += 1;
-      expireTime.tv_nsec -= 1e9;
+    clock_gettime(SEMA_CLOCK_TYPE, &readTime);
+    readTime.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
+    if(readTime.tv_nsec > 1e9) {
+      readTime.tv_sec += 1;
+      readTime.tv_nsec -= 1e9;
     }
-    if(sem_timedwait(threadParams.pSema, &expireTime) < 0) {
+    if(sem_timedwait(threadParams.pSema, &readTime) < 0) {
       if(errno != ETIMEDOUT) {
         syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
       } else {
@@ -113,7 +112,7 @@ void *writeTask(void *arg)
       }
     } else {
       if ((queueData.rows == 0) || (queueData.cols == 0)) {
-        syslog(LOG_ERR, "%s received bad frame: empty = %d, rows = %d, cols = %d", __func__, img.empty(), img.rows, img.cols);
+        syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, queueData.rows, queueData.cols);
       } else {
         /* convert received data into Mat object */
         Mat receivedImg(Size(queueData.cols, queueData.rows), queueData.type, queueData.data);
@@ -124,8 +123,9 @@ void *writeTask(void *arg)
         // TODO - do we need to write timestamp and platform info here? Or is that being added to image directly?
 
         // Write frame to output file
-        syslog(LOG_INFO, "%s frame %s saved", __func__, filename);
         imwrite(filename, receivedImg);
+        clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
+        syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, frameNum, TIMESPEC_TO_MSEC(readTime));
         ++frameNum;
       }
 	  }
@@ -135,8 +135,8 @@ void *writeTask(void *arg)
 
   /* Thread exit - cleanup */
   mq_close(writeQueue);
-  clock_gettime(SYSLOG_CLOCK_TYPE, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(readTime));
 
   return NULL;
 }
