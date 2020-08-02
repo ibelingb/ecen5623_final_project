@@ -144,7 +144,7 @@ void *writeTask(void *arg)
           Mat receivedImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
 
           /* Save frame to memory */
-          sprintf(filename, "./f%d_filt%d_hough%d.jpg", dummy.diffFrameNum, threadParams.filter_enable, threadParams.hough_enable);
+          sprintf(filename, "./f%d_filt%d_hough%d.ppm", dummy.diffFrameNum, threadParams.filter_enable, threadParams.hough_enable);
 
           /* Add timestamp and uname to frame and write frame to output file */
           uname(&unameData);
