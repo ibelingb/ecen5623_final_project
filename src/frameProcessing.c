@@ -167,8 +167,8 @@ void *processingTask(void *arg)
                         gray.rows/4,    // min distance between centers of detected circles
                         100,            // high threshold
                         30,             // low threshold
-                        100,            // min. circle radius
-                        200             // max. circle radius
+                        140,            // min. circle radius
+                        250             // max. circle radius
             );
             cout << "num circles: " << circles.size() << std::endl;
 
