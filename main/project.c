@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
   clock_gettime(CLOCK_MONOTONIC, &startTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
 
-  if (argc < 3) {
+  if (argc < 4) {
     syslog(LOG_ERR, "incorrect number of arguments provided");
     cout  << "invalid parameter provided provided\n\n";
     usage();
@@ -138,6 +138,7 @@ int main(int argc, char *argv[])
 
   syslog(LOG_INFO, "hough_enable: %d", threadParams[Thread_e::PROC_THREAD].hough_enable);
   syslog(LOG_INFO, "filter_enable: %d", threadParams[Thread_e::PROC_THREAD].filter_enable);
+  syslog(LOG_INFO, "save_type: %d",  threadParams[Thread_e::DIFF_THREAD].save_type);
   syslog(LOG_INFO, "cam_index: %d", threadParams[Thread_e::ACQ_THREAD].cameraIdx);
   
   /*---------------------------------------*/
@@ -292,9 +293,9 @@ syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIM
 
 void usage(void) 
 {
-  cout  << "Usage: sudo ./project [hough_enable] [filter_enable]\n"
-        << "sudo ./project on on\n"
-        << "sudo ./project off off\n";
+  cout  << "Usage: sudo ./project [hough_enable] [filter_enable] [save_type]\n"
+        << "sudo ./project on on 0\n"
+        << "sudo ./project off off 1\n";
 }
 
 void print_scheduler(void)
