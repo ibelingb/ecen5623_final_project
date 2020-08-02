@@ -84,21 +84,21 @@ void *differenceTask(void *arg)
     return NULL;
   }
   
-  struct timespec startTime, sendTime, expireTime;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  struct timespec timeNow, prevSendTime, sendTime;
+  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   Mat prevFrame;
   Mat blank = Mat::zeros(Size(MAX_IMG_COLS, MAX_IMG_ROWS), CV_8UC1);
   unsigned int timeoutCnt = 0;
 	while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &expireTime);
-    expireTime.tv_nsec += DIFF_THREAD_SEMA_TIMEOUT;
-    if(expireTime.tv_nsec > 1e9) {
-      expireTime.tv_sec += 1;
-      expireTime.tv_nsec -= 1e9;
+    clock_gettime(CLOCK_REALTIME, &timeNow);
+    timeNow.tv_nsec += DIFF_THREAD_SEMA_TIMEOUT;
+    if(timeNow.tv_nsec > 1e9) {
+      timeNow.tv_sec += 1;
+      timeNow.tv_nsec -= 1e9;
     }
-    if(sem_timedwait(threadParams.pSema, &expireTime) < 0) {
+    if(sem_timedwait(threadParams.pSema, &timeNow) < 0) {
       if(errno != ETIMEDOUT) {
         syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
       } else {
@@ -135,8 +135,8 @@ void *differenceTask(void *arg)
 
       /* if difference detected, send for processing */
       if(countNonZero(bw) > 10) {
-        clock_gettime(CLOCK_MONOTONIC, &expireTime);
-        std::string label = format("Frame time: %.2f ms", CALC_DT_MSEC(expireTime, threadParams.programStartTime));
+        clock_gettime(CLOCK_MONOTONIC, &timeNow);
+        std::string label = format("Frame time: %.2f ms", CALC_DT_MSEC(timeNow, threadParams.programStartTime));
         putText(nextFrame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
         int len = nextFrame.rows * nextFrame.cols * nextFrame.elemSize();
         uint8_t *pixelData = (uint8_t *)malloc(len);
@@ -154,8 +154,8 @@ void *differenceTask(void *arg)
 
         /* try to insert image but don't block if full
         * so that we loop around and just get the newest */
-        clock_gettime(CLOCK_REALTIME, &expireTime);
-        if(mq_timedsend(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
+        clock_gettime(CLOCK_REALTIME, &timeNow);
+        if(mq_timedsend(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {
             if(errno == ETIMEDOUT) {
               cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
             }
@@ -163,16 +163,19 @@ void *differenceTask(void *arg)
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
         } else {
           clock_gettime(CLOCK_MONOTONIC, &sendTime);
-          syslog(LOG_INFO, "%s sent image#%d at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+          syslog(LOG_INFO, "%s sent/inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,
+            CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
           ++cnt;
         }
       }
       /* store old frame */
       nextFrame.copyTo(prevFrame);
+      prevSendTime.tv_sec = sendTime.tv_sec;
+      prevSendTime.tv_nsec = prevSendTime.tv_nsec;
     }
 	}
   mq_close(selectQueue);
-  clock_gettime(CLOCK_REALTIME, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  clock_gettime(CLOCK_REALTIME, &timeNow);
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   return NULL;
 }

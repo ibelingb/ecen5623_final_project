@@ -93,22 +93,22 @@ void *processingTask(void *arg)
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   Mat kern2D = kern1D * kern1D.t();
   
-  struct timespec startTime, sendTime, expireTime;
+  struct timespec timeNow, sendTime, prevSendTime;
   Mat readImg, procImg;
 
   unsigned int prio;
   unsigned int timeoutCnt = 0;
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   while(1) {
     /* wait for semaphore */
-    clock_gettime(CLOCK_REALTIME, &expireTime);
-    expireTime.tv_nsec += PROC_THREAD_SEMA_TIMEOUT;
-    if(expireTime.tv_nsec > 1e9) {
-      expireTime.tv_sec += 1;
-      expireTime.tv_nsec -= 1e9;
+    clock_gettime(CLOCK_REALTIME, &timeNow);
+    timeNow.tv_nsec += PROC_THREAD_SEMA_TIMEOUT;
+    if(timeNow.tv_nsec > 1e9) {
+      timeNow.tv_sec += 1;
+      timeNow.tv_nsec -= 1e9;
     }
-    if(sem_timedwait(threadParams.pSema, &expireTime) < 0) {
+    if(sem_timedwait(threadParams.pSema, &timeNow) < 0) {
       if(errno != ETIMEDOUT) {
         syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
       } else {
@@ -141,8 +141,8 @@ void *processingTask(void *arg)
           waitKey(1);
 
           /* Send frame to fraemWrite via writeQueue */
-          clock_gettime(CLOCK_REALTIME, &expireTime);
-          if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &expireTime) != 0) {
+          clock_gettime(CLOCK_REALTIME, &timeNow);
+          if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {
             if(errno == ETIMEDOUT) {
               cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
             } 
@@ -150,8 +150,11 @@ void *processingTask(void *arg)
             syslog(LOG_ERR, "%s error with mq_timedsend, errno: %d [%s]", __func__, errno, strerror(errno));
           } else {
             clock_gettime(CLOCK_MONOTONIC, &sendTime);
-            syslog(LOG_INFO, "%s sent image#%d to writeQueue at: %f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+            syslog(LOG_INFO, "%s sent/inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,
+            CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
             ++cnt;
+            prevSendTime.tv_sec = sendTime.tv_sec;
+            prevSendTime.tv_nsec = prevSendTime.tv_nsec;
           }
         }
       }
@@ -160,7 +163,7 @@ void *processingTask(void *arg)
 
   mq_close(selectQueue);
   mq_close(writeQueue);
-  clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(startTime));
+  clock_gettime(CLOCK_MONOTONIC, &timeNow);
+  syslog(LOG_INFO, "%s (tid = %lu) exiting at: %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   return NULL;
 }

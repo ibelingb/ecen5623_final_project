@@ -113,7 +113,7 @@ void *acquisitionTask(void*arg)
 
       /* insert in circular buffer */
       threadParams.pCBuff->put(readImg);
-      syslog(LOG_INFO, "frame acquired/inserted, dt since start: %.2f ms, dt since last frame: %.2f ms", 
+      syslog(LOG_INFO, "%s acquired/inserted into CB, dt since start: %.2f ms, dt since last frame: %.2f ms", __func__,
       CALC_DT_MSEC(timeNow, threadParams.programStartTime), CALC_DT_MSEC(timeNow, prevReadTime));
       if(threadParams.pCBuff->full()) {
         syslog(LOG_WARNING, "circular buffer full");
