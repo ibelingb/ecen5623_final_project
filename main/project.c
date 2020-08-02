@@ -239,16 +239,16 @@ int main(int argc, char *argv[])
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::DIFF_THREAD);
   }
 
-  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 3, 2);
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 4, 2);
   threadParams[Thread_e::PROC_THREAD].pSema = &semas[Thread_e::PROC_THREAD];
   if(pthread_create(&threads[Thread_e::PROC_THREAD], &thread_attr, processingTask, (void *)&threadParams[Thread_e::PROC_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::PROC_THREAD);
   }
 
-  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 4, 1);
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_RR, 4, 1);
   threadParams[Thread_e::WRITE_THREAD].pSema = &semas[Thread_e::WRITE_THREAD];
   if(pthread_create(&threads[Thread_e::WRITE_THREAD], &thread_attr, writeTask, (void *)&threadParams[Thread_e::WRITE_THREAD]) != 0) {
-    syslog(LOG_ERR, "couldn't create thread#%d", WRITE_THREAD);
+    syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::WRITE_THREAD);
   }
 
   set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 1, 4);
@@ -257,8 +257,8 @@ int main(int argc, char *argv[])
   seqThreadParams.pProcSema  = &semas[Thread_e::PROC_THREAD];
   seqThreadParams.pWriteSema = &semas[Thread_e::WRITE_THREAD];
   seqThreadParams.pSeqSema   = &semas[Thread_e::SEQ_THREAD]; // TODO - remove?
-  if(pthread_create(&threads[SEQ_THREAD], &thread_attr, sequencerTask, (void *)&seqThreadParams) != 1) {
-    syslog(LOG_ERR, "couldn't create thread#%d", SEQ_THREAD);
+  if(pthread_create(&threads[SEQ_THREAD], &thread_attr, sequencerTask, (void *)&seqThreadParams) != 0) {
+    syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::SEQ_THREAD);
   }
 
   /*----------------------------------------------*/
