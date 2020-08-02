@@ -40,6 +40,7 @@ typedef struct {
   int cols;
   size_t elem_size;
   unsigned int diffFrameNum;
+  uint8_t isColor;
 } imgDef_t;
 
 #define SELECT_QUEUE_MSG_SIZE         (sizeof(imgDef_t))

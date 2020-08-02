@@ -48,8 +48,6 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
-#define FILTER_SIZE   (31)
-#define FILTER_SIGMA  (2.0)
 
 /*---------------------------------------------------------------------------------*/
 /* PRIVATE FUNCTIONS */
@@ -89,9 +87,6 @@ void *processingTask(void *arg)
     cout << __func__<< " couldn't open queue" << endl;
     return NULL;
   }
-
-  Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
-  Mat kern2D = kern1D * kern1D.t();
   
   struct timespec timeNow, sendTime, prevSendTime;
   Mat readImg, procImg;
@@ -131,11 +126,6 @@ void *processingTask(void *arg)
           syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, dummy.rows, dummy.cols);
         } else {
           Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
-
-          /* process image */
-          if(threadParams.filter_enable) {
-            sepFilter2D(readImg, readImg, CV_8U, kern1D, kern1D);
-          }
           imshow("procImg", readImg);
           waitKey(1);
 
@@ -153,7 +143,7 @@ void *processingTask(void *arg)
             CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
             ++cnt;
             prevSendTime.tv_sec = sendTime.tv_sec;
-            prevSendTime.tv_nsec = prevSendTime.tv_nsec;
+            prevSendTime.tv_nsec = sendTime.tv_nsec;
           }
         }
       }

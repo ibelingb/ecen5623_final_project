@@ -31,6 +31,7 @@
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
+#include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>  // OpenCV window I/O
 
@@ -84,6 +85,19 @@ void *writeTask(void *arg)
     return NULL;
   }
 
+  /* create video writer */
+  // int codec = VideoWriter::fourcc('M',''P','G','4'');
+  // string videoFilename = "video.mp4";
+  int codec = VideoWriter::fourcc('M','J','P','G');
+  string videoFilename = "video.avi";
+  VideoWriter writer;
+  int isColor = 1;
+  double fps = 10.0;
+  writer.open(videoFilename, codec, fps, Size(MAX_IMG_COLS, MAX_IMG_ROWS), isColor);
+  if(!writer.isOpened()) {
+    cout << "failed to open video writer" << std::endl;
+  }
+
   clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(readTime));
 	while(1) {
@@ -127,6 +141,12 @@ void *writeTask(void *arg)
 
           // Write frame to output file
           imwrite(filename, receivedImg);
+
+          if(threadParams.save_type != SaveType_e::SAVE_COLOR_IMAGE) {
+            cvtColor(receivedImg, receivedImg, COLOR_GRAY2RGB);
+          }
+          writer.write(receivedImg);
+          
           clock_gettime(SYSLOG_CLOCK_TYPE, &readTime);
           syslog(LOG_INFO, "%s image#%d saved at: %.2f", __func__, queueData.diffFrameNum, TIMESPEC_TO_MSEC(readTime));
           ++frameNum;

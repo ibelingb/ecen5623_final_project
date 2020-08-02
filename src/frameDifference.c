@@ -47,6 +47,8 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
+#define FILTER_SIZE   (15)
+#define FILTER_SIGMA  (2.0)
 
 /*---------------------------------------------------------------------------------*/
 /* PRIVATE FUNCTIONS */
@@ -83,6 +85,9 @@ void *differenceTask(void *arg)
     cout << __func__<< " couldn't open queue" << endl;
     return NULL;
   }
+
+  /* create filter kernel */
+  Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   
   struct timespec timeNow, prevSendTime, sendTime;
   clock_gettime(CLOCK_MONOTONIC, &timeNow);
@@ -131,6 +136,11 @@ void *differenceTask(void *arg)
       /* find difference */
       Mat diffFrame = nextFrame - prevFrame;
       
+      /* process image */
+      if(threadParams.filter_enable) {
+        sepFilter2D(diffFrame, diffFrame, CV_8U, kern1D, kern1D);
+      }
+  
       /* convert to binary */
       Mat bw;
       threshold(diffFrame, bw, 20, 255, THRESH_BINARY);
@@ -162,7 +172,8 @@ void *differenceTask(void *arg)
                             .rows = newTimeFrame.rows, 
                             .cols = newTimeFrame.cols, 
                             .elem_size = newTimeFrame.elemSize(),
-                            .diffFrameNum = cnt};
+                            .diffFrameNum = cnt,
+                            .isColor = (threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE)};
 
         /* try to insert image but don't block if full
         * so that we loop around and just get the newest */
@@ -178,7 +189,7 @@ void *differenceTask(void *arg)
           syslog(LOG_INFO, "%s sent/inserted frame#%d to selectQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,
             CALC_DT_MSEC(sendTime, threadParams.programStartTime), CALC_DT_MSEC(sendTime, prevSendTime));
           prevSendTime.tv_sec = sendTime.tv_sec;
-          prevSendTime.tv_nsec = prevSendTime.tv_nsec;
+          prevSendTime.tv_nsec = sendTime.tv_nsec;
           ++cnt;
         }
       }

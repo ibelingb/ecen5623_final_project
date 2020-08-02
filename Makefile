@@ -36,7 +36,7 @@ READELF = readelf
 endif
 
 # for recursive clean
-GARBAGE_TYPES := *.o *.elf *.map *.i *.asm *.d *.out
+GARBAGE_TYPES := *.o *.elf *.map *.i *.asm *.d *.out *.jpg *.avi *.ppm *.pgm
 DIR_TO_CLEAN = src test
 DIR_TO_CLEAN += $(shell find -not -path "./.git**" -type d)
 GARBAGE_TYPED_FOLDERS := $(foreach DIR,$(DIR_TO_CLEAN), $(addprefix $(DIR)/,$(GARBAGE_TYPES)))
