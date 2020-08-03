@@ -117,11 +117,6 @@ void *differenceTask(void *arg)
       }
     }
 
-#if defined(TIMESTAMP_SYSLOG_OUTPUT)
-    clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-    syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
-#endif
-
     /* if this is the first time through, fill previous frame */
     if(prevFrame.empty() && !threadParams.pCBuff->empty()) {
       prevFrame = threadParams.pCBuff->get();
@@ -135,6 +130,11 @@ void *differenceTask(void *arg)
     /* continue as long as there's frames in buffer */
     while(!threadParams.pCBuff->empty())
     {
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+      syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
+
       Mat readFrame = threadParams.pCBuff->get();
       if(readFrame.empty()) {
         cout << "ERROR: nextFrame empty still!" << endl;
