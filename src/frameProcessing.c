@@ -118,11 +118,6 @@ void *processingTask(void *arg)
     imgDef_t dummy;
     uint8_t emptyFlag = 0;
     do {
-#if defined(TIMESTAMP_SYSLOG_OUTPUT)
-      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-      syslog(LOG_INFO, "%s frame process start:,  %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
-#endif
-
       if(mq_receive(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
         if(errno != EAGAIN) {
           syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
@@ -133,6 +128,10 @@ void *processingTask(void *arg)
         if ((dummy.rows == 0) || (dummy.cols == 0)) {
           syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, dummy.rows, dummy.cols);
         } else {
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+          clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+          syslog(LOG_INFO, "%s frame process start:,  %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
           Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
 
           if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
