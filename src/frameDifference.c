@@ -155,18 +155,19 @@ void *differenceTask(void *arg)
        * frame to ensure the hands are stationary */
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       if(countNonZero(bw) > 100) {
-        skipNextCnt = 3;
+        skipNextCnt = 8;
 
         while(skipNextCnt != 0) {
           if(threadParams.pCBuff->empty()) {
             cout << "not enough frames in CB to fulfill skip request, using last in CB" << endl;
             break;
           } else {
-            nextFrame = threadParams.pCBuff->get();
+            cout << " skip# " << (int)skipNextCnt << endl;
+            readFrame = threadParams.pCBuff->get();
+            cvtColor(readFrame, nextFrame, COLOR_RGB2GRAY);
             --skipNextCnt;
           }
         }
-        cvtColor(nextFrame, nextFrame, COLOR_RGB2GRAY);
 
         if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
           readFrame.copyTo(newTimeFrame);
