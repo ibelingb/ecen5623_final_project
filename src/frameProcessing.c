@@ -114,15 +114,15 @@ void *processingTask(void *arg)
       }
     }
 
-#if defined(TIMESTAMP_SYSLOG_OUTPUT)
-    clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-    syslog(LOG_INFO, "%s frame process start:,  %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
-#endif
-
     /* read oldest, highest priority msg from the message queue */
     imgDef_t dummy;
     uint8_t emptyFlag = 0;
     do {
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+      syslog(LOG_INFO, "%s frame process start:,  %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
+
       if(mq_receive(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
         if(errno != EAGAIN) {
           syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
