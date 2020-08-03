@@ -155,14 +155,14 @@ void *differenceTask(void *arg)
        * frame to ensure the hands are stationary */
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       if(countNonZero(bw) > 100) {
-        skipNextCnt = 8;
+        skipNextCnt = 5;
 
         while(skipNextCnt != 0) {
           if(threadParams.pCBuff->empty()) {
             cout << "not enough frames in CB to fulfill skip request, using last in CB" << endl;
             break;
           } else {
-            cout << " skip# " << (int)skipNextCnt << endl;
+            // cout << " skip# " << (int)skipNextCnt << endl;
             readFrame = threadParams.pCBuff->get();
             cvtColor(readFrame, nextFrame, COLOR_RGB2GRAY);
             --skipNextCnt;

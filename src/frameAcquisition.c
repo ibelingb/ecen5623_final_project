@@ -95,7 +95,8 @@ void *acquisitionTask(void*arg)
 
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
-  unsigned int readCnt = 0;
+  unsigned int skipCount = 0;
+  unsigned int readCount = 0;
   while(1) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
@@ -121,11 +122,13 @@ void *acquisitionTask(void*arg)
     cam >> readImg;
 
     /* verify we've skipped required frames at start */
-    if((!readImg.empty()) && (++readCnt > FRAMES_TO_SKIP)) {
-      readCnt = FRAMES_TO_SKIP;
+    if((!readImg.empty()) && (++skipCount > FRAMES_TO_SKIP)) {
+      skipCount = FRAMES_TO_SKIP;
+      ++readCount;
 
-      // sprintf(filename, "./f%d_filt%d_hough%d.ppm", dummy.diffFrameNum, threadParams.filter_enable, threadParams.hough_enable);
-      // imwrite(filename, receivedImg);
+      // char filename[80];
+      // sprintf(filename, "./acquiredFrame%d.ppm", readCount);
+      // imwrite(filename, readImg);
 
       /* insert in circular buffer */
       threadParams.pCBuff->put(readImg);
