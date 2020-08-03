@@ -83,7 +83,6 @@ void *acquisitionTask(void*arg)
     cam.set(CAP_PROP_FRAME_WIDTH, 640);
     cam.set(CAP_PROP_FRAME_HEIGHT, 480);
     cam.set(CAP_PROP_AUTOFOCUS, 0);
-    cam.set(CAP_PROP_BACKLIGHT, 1);
     cout  << "cam size (HxW): " << cam.get(CAP_PROP_FRAME_WIDTH)
           << " x " << cam.get(CAP_PROP_FRAME_HEIGHT) << endl;
   }
