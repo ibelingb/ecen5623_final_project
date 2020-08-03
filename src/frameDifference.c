@@ -163,6 +163,9 @@ void *differenceTask(void *arg)
             break;
           } else {
             // cout << " skip# " << (int)skipNextCnt << endl;
+            // char filename[80];
+            // sprintf(filename, "./Diff_acquiredFrame%d_skip#%d.ppm", cnt, skipNextCnt);
+            // imwrite(filename, readFrame);
             readFrame = threadParams.pCBuff->get();
             cvtColor(readFrame, nextFrame, COLOR_RGB2GRAY);
             --skipNextCnt;
