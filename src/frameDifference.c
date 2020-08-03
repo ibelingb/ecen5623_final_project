@@ -146,9 +146,6 @@ void *differenceTask(void *arg)
 
       /* find difference */
       Mat diffFrame = nextFrame - prevFrame;
-      
-      /* process image */
-      sepFilter2D(diffFrame, diffFrame, CV_8U, kern1D, kern1D);
   
       /* convert to binary */
       Mat bw;
@@ -158,20 +155,19 @@ void *differenceTask(void *arg)
        * frame to ensure the hands are stationary */
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       if(countNonZero(bw) > 100) {
-        skipNextCnt = 1;
+        skipNextCnt = 5;
 
         while(skipNextCnt != 0) {
           if(threadParams.pCBuff->empty()) {
-            cout << "not enough frame in CB!" << endl;
+            cout << "not enough frames in CB to fulfill skip request, using last in CB" << endl;
             break;
+          } else {
+            // cout << " skip# " << (int)skipNextCnt << endl;
+            readFrame = threadParams.pCBuff->get();
+            cvtColor(readFrame, nextFrame, COLOR_RGB2GRAY);
+            --skipNextCnt;
           }
-          nextFrame = threadParams.pCBuff->get();
-          --skipNextCnt;
         }
-        if(skipNextCnt != 0) {
-          break;
-        }
-        cvtColor(nextFrame, nextFrame, COLOR_RGB2GRAY);
 
         if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
           readFrame.copyTo(newTimeFrame);
