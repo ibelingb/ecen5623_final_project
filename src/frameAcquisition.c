@@ -72,6 +72,10 @@ void *acquisitionTask(void*arg)
     syslog(LOG_ERR, "invalid circular buffer provided to %s", __func__);
     return NULL;
   }
+  if(threadParams.pMutex == NULL) {
+    syslog(LOG_ERR, "invalid MUTEX provided to %s", __func__);
+    return NULL;
+  }
 
   /* open camera stream */
   VideoCapture cam;
@@ -131,7 +135,9 @@ void *acquisitionTask(void*arg)
       // imwrite(filename, readImg);
 
       /* insert in circular buffer */
+      pthread_mutex_lock(threadParams.pMutex);
       threadParams.pCBuff->put(readImg);
+      pthread_mutex_unlock(threadParams.pMutex);
 
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);

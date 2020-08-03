@@ -24,7 +24,7 @@
 /*---------------------------------------------------------------------------------*/
 /* INCLUDES */
 #include <memory>
-#include <mutex>
+//#include <mutex>
 
 template <class T>
 class circular_buffer {
@@ -38,7 +38,7 @@ public:
 
 	void put(T item)
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		//std::lock_guard<std::mutex> lock(mutex_);
 
 		buf_[head_] = item;
 
@@ -52,7 +52,7 @@ public:
 
 	T get()
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		//std::lock_guard<std::mutex> lock(mutex_);
 
 		if(empty()) {
 			return T();
@@ -68,7 +68,7 @@ public:
 
   T peek()
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		//std::lock_guard<std::mutex> lock(mutex_);
 
 		if(empty()) {
 			return T();
@@ -81,7 +81,7 @@ public:
 
 	void reset()
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		//std::lock_guard<std::mutex> lock(mutex_);
 		head_ = tail_;
 		full_ = false;
 	}
@@ -118,7 +118,7 @@ public:
 	}
 
 private:
-	std::mutex mutex_;
+	//std::mutex mutex_;
 	std::unique_ptr<T[]> buf_;
 	size_t head_ = 0;
 	size_t tail_ = 0;

@@ -90,6 +90,7 @@ typedef struct {
   sem_t *pSema;                               /* semaphore */
   char selectQueueName[64];                   /* message queue */
   char writeQueueName[64];                    /* message queue */
+  pthread_mutex_t *pMutex;	                  /* CB mutex */
   circular_buffer<cv::Mat> *pCBuff;           /* circular buffer pointer */
   unsigned int hough_enable;                  /* enable hough transformations */
   unsigned int filter_enable;                 /* enable filtering */
