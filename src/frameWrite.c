@@ -110,27 +110,27 @@ void *writeTask(void *arg)
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(timeNow));
 	while(1) {
-    // /* wait for semaphore */
-    // clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
-    // timeNow.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
-    // if(timeNow.tv_nsec > 1e9) {
-    //   timeNow.tv_sec += 1;
-    //   timeNow.tv_nsec -= 1e9;
-    // }
-    // if(sem_timedwait(threadParams.pSema, &timeNow) < 0) {
-    //   if(errno != ETIMEDOUT) {
-    //     syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
-    //   } else {
-    //     syslog(LOG_ERR, "%s semaphore timed out", __func__);
-    //   }
-    // }
+    /* wait for semaphore */
+    clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
+    timeNow.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
+    if(timeNow.tv_nsec > 1e9) {
+      timeNow.tv_sec += 1;
+      timeNow.tv_nsec -= 1e9;
+    }
+    if(sem_timedwait(threadParams.pSema, &timeNow) < 0) {
+      if(errno != ETIMEDOUT) {
+        syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
+      } else {
+        syslog(LOG_ERR, "%s semaphore timed out", __func__);
+      }
+    }
 
     /* Read Frame from writeQueue */
     emptyFlag = 0;
     do {
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-      syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+      syslog(LOG_INFO, "%s frame process start (msec):, %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
       if(mq_receive(writeQueue, (char *)&dummy, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
         if (errno == EAGAIN) {
@@ -165,7 +165,7 @@ void *writeTask(void *arg)
           
           clock_gettime(SYSLOG_CLOCK_TYPE, &saveTime);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-          syslog(LOG_INFO, "%s frame #%d saved at:, %.2f, ms", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(saveTime));
+          syslog(LOG_INFO, "%s frame #%d saved at (msec):, %.2f", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(saveTime));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
           syslog(LOG_INFO, "%s saved frame#%d, dt since start: %.2f ms, dt since last frame saved: %.2f ms", __func__, dummy.diffFrameNum,

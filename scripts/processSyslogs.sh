@@ -10,6 +10,10 @@ fi
 mkdir $1
 cat /var/log/syslog | grep "project\[$1\]" > $1/syslog_$1.txt
 
+cat $1/syslog_$1.txt | grep "sequencer cycle start" > $1/sequencer_start_$1.txt &
+cat $1/syslog_$1.txt | grep "sequencer" > $1/sequencer_ACET_$1.txt &
+cat $1/syslog_$1.txt | grep "sequencer cycle done" > $1/sequencer_finish_$1.txt &
+
 cat $1/syslog_$1.txt | grep "acquisitionTask frame process start" > $1/acqThread_start_$1.txt &
 cat $1/syslog_$1.txt | grep "acquisitionTask frame" > $1/acqThread_ACET_$1.txt &
 cat $1/syslog_$1.txt | grep "acquisitionTask frame inserted" > $1/acqThread_finish_$1.txt &

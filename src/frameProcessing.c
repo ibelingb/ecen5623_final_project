@@ -130,7 +130,7 @@ void *processingTask(void *arg)
         } else {
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
           clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-          syslog(LOG_INFO, "%s frame process start:,  %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+          syslog(LOG_INFO, "%s frame process start (msec):,  %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
           Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
 
@@ -208,7 +208,7 @@ void *processingTask(void *arg)
           } else {
             clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-            syslog(LOG_INFO, "%s frame #%d inserted to writeQueue at:,  %.2f, ms", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(sendTime));
+            syslog(LOG_INFO, "%s frame #%d inserted to writeQueue at (msec):,  %.2f", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(sendTime));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
             syslog(LOG_INFO, "%s inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, dummy.diffFrameNum,

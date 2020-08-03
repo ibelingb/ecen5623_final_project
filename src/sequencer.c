@@ -43,7 +43,6 @@
 #define SCHED_TYPE SCHED_FIFO
 
 #define SEQ_TIMER_INTERVAL_NSEC (8333333) // 120 Hz
-//#define SEQ_TIMER_INTERVAL_NSEC (10000000) // 100 Hz
 
 #define ACQUIRE_FRAMES_EXEC_RATE_HZ (24)
 #define DIFFERENCE_FRAMES_EXEC_RATE_HZ (2)
@@ -65,6 +64,7 @@ sem_t *pProcSema;
 sem_t *pWriteSema;
 sem_t *pSeqSema; // TODO - remove?
 
+struct timespec timeNow;
 /*------------------------------------------------------------------------*/
 /*** METHODS ***/
 /*------------------------------------------------------------------------*/
@@ -82,6 +82,13 @@ double realtime(struct timespec *tsptr) {
 
 /*------------------------------------------------------------------------*/
 void sequencer(int signal) {
+/*
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+  syslog(LOG_INFO, "%s cycle start (msec):, %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
+*/
+
   /* Increment sequence count */
   sequenceCount++;
 
@@ -109,6 +116,12 @@ void sequencer(int signal) {
       sem_post(&appCompleteSem);
     }
   }
+/*
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+  clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+  syslog(LOG_INFO, "%s cycle done (msec):, %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
+*/
 }
 
 /*------------------------------------------------------------------------*/
