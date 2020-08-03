@@ -208,6 +208,11 @@ int main(int argc, char *argv[])
     }
   }
 
+  pthread_mutex_t cb_mutex;
+  pthread_mutex_init(&cb_mutex, NULL);
+  threadParams[Thread_e::DIFF_THREAD].pMutex = &cb_mutex;
+  threadParams[Thread_e::ACQ_THREAD].pMutex = &cb_mutex;
+
   /*----------------------------------------------*/
   /* set scheduling policy of main and threads */
   /*----------------------------------------------*/

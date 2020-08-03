@@ -110,20 +110,20 @@ void *writeTask(void *arg)
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(timeNow));
 	while(1) {
-    /* wait for semaphore */
-    clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
-    timeNow.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
-    if(timeNow.tv_nsec > 1e9) {
-      timeNow.tv_sec += 1;
-      timeNow.tv_nsec -= 1e9;
-    }
-    if(sem_timedwait(threadParams.pSema, &timeNow) < 0) {
-      if(errno != ETIMEDOUT) {
-        syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
-      } else {
-        syslog(LOG_ERR, "%s semaphore timed out", __func__);
-      }
-    }
+    // /* wait for semaphore */
+    // clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
+    // timeNow.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
+    // if(timeNow.tv_nsec > 1e9) {
+    //   timeNow.tv_sec += 1;
+    //   timeNow.tv_nsec -= 1e9;
+    // }
+    // if(sem_timedwait(threadParams.pSema, &timeNow) < 0) {
+    //   if(errno != ETIMEDOUT) {
+    //     syslog(LOG_ERR, "%s error with sem_timedwait, errno: %d [%s]", __func__, errno, strerror(errno));
+    //   } else {
+    //     syslog(LOG_ERR, "%s semaphore timed out", __func__);
+    //   }
+    // }
 
     /* Read Frame from writeQueue */
     emptyFlag = 0;

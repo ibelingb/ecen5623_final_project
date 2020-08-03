@@ -77,6 +77,10 @@ void *differenceTask(void *arg)
     syslog(LOG_ERR, "invalid circular buffer provided to %s", __func__);
     return NULL;
   }
+  if(threadParams.pMutex == NULL) {
+    syslog(LOG_ERR, "invalid MUTEX provided to %s", __func__);
+    return NULL;
+  }
 
   /* open handle to queue */
   mqd_t selectQueue = mq_open(threadParams.selectQueueName,O_WRONLY, 0666, NULL);
@@ -119,7 +123,9 @@ void *differenceTask(void *arg)
 
     /* if this is the first time through, fill previous frame */
     if(prevFrame.empty() && !threadParams.pCBuff->empty()) {
+      pthread_mutex_lock(threadParams.pMutex);
       prevFrame = threadParams.pCBuff->get();
+      pthread_mutex_unlock(threadParams.pMutex);
       if(prevFrame.empty()) {
         cout << "ERROR: prevFrame empty still!" << endl;
         continue;
@@ -134,8 +140,9 @@ void *differenceTask(void *arg)
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
-
+      pthread_mutex_lock(threadParams.pMutex);
       Mat readFrame = threadParams.pCBuff->get();
+      pthread_mutex_unlock(threadParams.pMutex);
       if(readFrame.empty()) {
         cout << "ERROR: nextFrame empty still!" << endl;
         continue;
@@ -163,7 +170,12 @@ void *differenceTask(void *arg)
             break;
           } else {
             // cout << " skip# " << (int)skipNextCnt << endl;
+            // char filename[80];
+            // sprintf(filename, "./Diff_acquiredFrame%d_skip#%d.ppm", cnt, skipNextCnt);
+            // imwrite(filename, readFrame);
+            pthread_mutex_lock(threadParams.pMutex);
             readFrame = threadParams.pCBuff->get();
+            pthread_mutex_unlock(threadParams.pMutex);
             cvtColor(readFrame, nextFrame, COLOR_RGB2GRAY);
             --skipNextCnt;
           }
