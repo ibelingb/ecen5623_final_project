@@ -112,9 +112,9 @@ void *acquisitionTask(void*arg)
       }
     }
 
-    clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-    syslog(LOG_INFO, "%s frame received at:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+    clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+    syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
 
     /* read image from video */
