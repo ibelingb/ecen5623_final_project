@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <signal.h>
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
@@ -55,6 +56,12 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES */
+uint8_t runDiffThread;
+
+/*---------------------------------------------------------------------------------*/
+void shutdownDiffThread(int sig) {
+  runDiffThread = FALSE;
+}
 
 /*---------------------------------------------------------------------------------*/
 void *differenceTask(void *arg)
@@ -82,6 +89,9 @@ void *differenceTask(void *arg)
     return NULL;
   }
 
+  /* Register shutdown signal handler */ 
+  signal(SIGNAL_KILL_DIFF, shutdownDiffThread);
+
   /* open handle to queue */
   mqd_t selectQueue = mq_open(threadParams.selectQueueName,O_WRONLY, 0666, NULL);
   if(selectQueue == -1) {
@@ -105,7 +115,8 @@ void *differenceTask(void *arg)
   Mat newTimeFrame;
   unsigned int timeoutCnt = 0;
   uint8_t skipNextCnt = 0;
-	while(1) {
+  runDiffThread = TRUE;
+	while(runDiffThread == TRUE) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += DIFF_THREAD_SEMA_TIMEOUT;

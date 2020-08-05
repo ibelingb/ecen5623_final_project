@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <signal.h>
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
@@ -53,6 +54,12 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES */
+uint8_t runAcqThread;
+
+/*---------------------------------------------------------------------------------*/
+void shutdownAcqThread(int sig) {
+  runAcqThread = FALSE;
+}
 
 /*---------------------------------------------------------------------------------*/
 void *acquisitionTask(void*arg)
@@ -76,6 +83,9 @@ void *acquisitionTask(void*arg)
     syslog(LOG_ERR, "invalid MUTEX provided to %s", __func__);
     return NULL;
   }
+
+  /* Register shutdown signal handler */ 
+  signal(SIGNAL_KILL_ACQ, shutdownAcqThread);
 
   /* open camera stream */
   VideoCapture cam;
@@ -101,7 +111,8 @@ void *acquisitionTask(void*arg)
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
   unsigned int skipCount = 0;
   unsigned int readCount = 0;
-  while(1) {
+  runAcqThread = TRUE;
+  while(runAcqThread == TRUE) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += ACQ_THREAD_SEMA_TIMEOUT;
