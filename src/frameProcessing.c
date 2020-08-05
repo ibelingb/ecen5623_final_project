@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <signal.h>
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
@@ -54,6 +55,14 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES */
+uint8_t runProcThread;
+uint8_t emptyFlag = 0;
+
+/*---------------------------------------------------------------------------------*/
+void shutdownProcThread(int sig) {
+  runProcThread = FALSE;
+  emptyFlag = TRUE;
+}
 
 /*---------------------------------------------------------------------------------*/
 void *processingTask(void *arg)
@@ -71,6 +80,9 @@ void *processingTask(void *arg)
     syslog(LOG_ERR, "invalid semaphore provided to %s", __func__);
     return NULL;
   }
+
+  /* Register shutdown signal handler */ 
+  signal(SIGNAL_KILL_PROC, shutdownProcThread);
 
   /* open handle to queue */
   mqd_t selectQueue = mq_open(threadParams.selectQueueName, O_RDONLY, 0666, NULL);
@@ -96,9 +108,10 @@ void *processingTask(void *arg)
 
   unsigned int prio;
   unsigned int timeoutCnt = 0;
+  runProcThread = TRUE;
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
-  while(1) {
+  while(runProcThread == TRUE) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += PROC_THREAD_SEMA_TIMEOUT;
@@ -116,7 +129,7 @@ void *processingTask(void *arg)
 
     /* read oldest, highest priority msg from the message queue */
     imgDef_t dummy;
-    uint8_t emptyFlag = 0;
+    emptyFlag = 0;
     do {
       if(mq_receive(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
         if(errno != EAGAIN) {

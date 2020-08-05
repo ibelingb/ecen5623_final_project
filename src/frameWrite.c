@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <sys/utsname.h>
+#include <signal.h>
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
@@ -63,6 +64,7 @@ void *writeTask(void *arg)
 {
   char filename[80];
   uint8_t emptyFlag = 0;
+  uint8_t runWriteProc = 1;
   unsigned int prio;
   imgDef_t dummy;
   std::string timestamp;
@@ -109,7 +111,7 @@ void *writeTask(void *arg)
 
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(), TIMESPEC_TO_MSEC(timeNow));
-	while(1) {
+	while(runWriteProc == TRUE) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += WRITE_THREAD_SEMA_TIMEOUT;
@@ -162,6 +164,7 @@ void *writeTask(void *arg)
             cvtColor(receivedImg, receivedImg, COLOR_GRAY2RGB);
           }
           writer.write(receivedImg);
+
           
           clock_gettime(SYSLOG_CLOCK_TYPE, &saveTime);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
@@ -174,11 +177,22 @@ void *writeTask(void *arg)
           prevSaveTime.tv_nsec = saveTime.tv_nsec;
 #endif
         }
+        /* Shutdown application if max number of frames has been saved */
+        if(dummy.diffFrameNum == MAX_FRAME_COUNT) {
+          /* Break from while-loop */
+          runWriteProc = FALSE;
+          emptyFlag = 1;
+
+          /* Send signal to highest priority thread */
+          pthread_kill(*(threadParams.pTidSeqThread), SIGNAL_KILL_SEQ);
+        }
+
         /* free malloced data */
         free(dummy.data);
       }
     } while(!emptyFlag);
 	}
+
 
   /* Thread exit - cleanup */
   mq_close(writeQueue);
