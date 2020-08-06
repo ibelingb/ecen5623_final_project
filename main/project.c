@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::DIFF_THREAD);
   }
 
-  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 4, 2);
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 4, 3);
   threadParams[Thread_e::PROC_THREAD].pSema = &semas[Thread_e::PROC_THREAD];
   if(pthread_create(&threads[Thread_e::PROC_THREAD], &thread_attr, processingTask, (void *)&threadParams[Thread_e::PROC_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::PROC_THREAD);
