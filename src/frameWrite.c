@@ -154,7 +154,8 @@ void *writeTask(void *arg)
 
           /* Add timestamp and uname to frame and write frame to output file */
           uname(&unameData);
-          timestamp = format("Frame time: %.2f ms", dummy.diffFrameTime);
+          clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+          timestamp = format("Frame time: %.2f ms", TIMESPEC_TO_MSEC(timeNow));
           procName = format("uname: %s", unameData.sysname);
           putText(receivedImg, timestamp, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));
           putText(receivedImg, procName, Point(0, 30), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255));

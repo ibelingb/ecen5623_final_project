@@ -32,11 +32,11 @@
 //#define DT_SYSLOG_OUTPUT /* Used for application debugging */
 
 //#define DISPLAY_FRAMES
-#define OUTPUT_VIDEO
+//#define OUTPUT_VIDEO
 
 #define MAX_IMG_ROWS                  (480)
 #define MAX_IMG_COLS                  (640)
-#define MAX_FRAME_COUNT               (1801)
+#define MAX_FRAME_COUNT               (1800)
 #define TIME_TO_SKIP_MSEC             (1000)
 #define FRAMES_TO_SKIP_AT_START       ((unsigned int)((TIME_TO_SKIP_MSEC * 24)/1000))
 

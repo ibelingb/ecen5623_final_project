@@ -16,5 +16,6 @@ sleep 3
 scp -r  -i ~/.ssh/rpi pi@raspberrypi:~/proj/scripts/$1/* /E/proj_data/$1/logs
 scp -r  -i ~/.ssh/rpi pi@raspberrypi:~/proj/f* /E/proj_data/$1/frames
 scp -r  -i ~/.ssh/rpi pi@raspberrypi:~/proj/video.avi /E/proj_data/$1
+scp -r  -i ~/.ssh/rpi pi@raspberrypi:~/proj/output.txt /E/proj_data/$1
 
 exit 0
