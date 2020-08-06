@@ -32,7 +32,7 @@
 //#define DT_SYSLOG_OUTPUT /* Used for application debugging */
 
 //#define DISPLAY_FRAMES
-//#define OUTPUT_VIDEO
+#define OUTPUT_VIDEO
 
 #define MAX_IMG_ROWS                  (480)
 #define MAX_IMG_COLS                  (640)

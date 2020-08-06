@@ -177,7 +177,7 @@ void *differenceTask(void *arg)
       unsigned int pixelDiffCount = countNonZero(bw);
       if(pixelDiffCount !=0) {
         clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-        cout << "countNonZero(bw): " << pixelDiffCount << " time since start: " << (int)TIMESPEC_TO_MSEC(timeNow) << endl;
+        cout << "countNonZero(bw):, " << pixelDiffCount << ", time since start:, " << (int)TIMESPEC_TO_MSEC(timeNow) << endl;
       }
       /* if a difference was found, take the next
        * frame to ensure the hands are stationary */
