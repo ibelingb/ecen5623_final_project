@@ -122,9 +122,11 @@ void *differenceTask(void *arg)
     }
 
     /* if this is the first time through, fill previous frame */
-    if(prevFrame.empty() && !threadParams.pCBuff->empty()) {
+    if(prevFrame.empty() && !threadParams.pCBuffcv->empty()) {
+    //if(prevFrame.empty() && !threadParams.pCBuff->empty()) {
       pthread_mutex_lock(threadParams.pMutex);
-      prevFrame = threadParams.pCBuff->get();
+      threadParams.pCBuffcv->get(prevFrame);
+      //prevFrame = threadParams.pCBuff->get();
       pthread_mutex_unlock(threadParams.pMutex);
       if(prevFrame.empty()) {
         cout << "ERROR: prevFrame empty still!" << endl;
@@ -134,14 +136,17 @@ void *differenceTask(void *arg)
     }
 
     /* continue as long as there's frames in buffer */
-    while(!threadParams.pCBuff->empty())
+    while(!threadParams.pCBuffcv->empty())
+    //while(!threadParams.pCBuff->empty())
     {
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
       pthread_mutex_lock(threadParams.pMutex);
-      Mat readFrame = threadParams.pCBuff->get();
+      Mat readFrame;
+      threadParams.pCBuffcv->get(readFrame);
+      //readFrame = threadParams.pCBuff->get();
       pthread_mutex_unlock(threadParams.pMutex);
       if(readFrame.empty()) {
         cout << "ERROR: nextFrame empty still!" << endl;
@@ -162,10 +167,11 @@ void *differenceTask(void *arg)
        * frame to ensure the hands are stationary */
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       if(countNonZero(bw) > 100) {
-        skipNextCnt = 5;
+        skipNextCnt = 3;
 
         while(skipNextCnt != 0) {
-          if(threadParams.pCBuff->empty()) {
+          //if(threadParams.pCBuff->empty()) {
+          if(threadParams.pCBuffcv->empty()) {
             cout << "not enough frames in CB to fulfill skip request, using last in CB" << endl;
             break;
           } else {
@@ -174,7 +180,8 @@ void *differenceTask(void *arg)
             // sprintf(filename, "./Diff_acquiredFrame%d_skip#%d.ppm", cnt, skipNextCnt);
             // imwrite(filename, readFrame);
             pthread_mutex_lock(threadParams.pMutex);
-            readFrame = threadParams.pCBuff->get();
+            threadParams.pCBuffcv->get(readFrame);
+            //readFrame = threadParams.pCBuff->get();
             pthread_mutex_unlock(threadParams.pMutex);
             cvtColor(readFrame, nextFrame, COLOR_RGB2GRAY);
             --skipNextCnt;

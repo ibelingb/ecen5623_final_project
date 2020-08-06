@@ -21,6 +21,7 @@
 #include <semaphore.h>
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
 #include "circular_buffer.h"
+#include "circular_cv_buffer.h"
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
@@ -92,6 +93,7 @@ typedef struct {
   char writeQueueName[64];                    /* message queue */
   pthread_mutex_t *pMutex;	                  /* CB mutex */
   circular_buffer<cv::Mat> *pCBuff;           /* circular buffer pointer */
+  circular_cv_buffer *pCBuffcv;                
   unsigned int hough_enable;                  /* enable hough transformations */
   unsigned int filter_enable;                 /* enable filtering */
   SaveType_e save_type;                       /* type of frame to pass through the pipeline */

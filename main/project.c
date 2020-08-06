@@ -35,6 +35,7 @@
 #include <string>               // for strings
 #include <iomanip>              // for controlling float print precision
 #include <sstream>              // string to number conversion
+#include <vector>
 
 using namespace cv;
 using namespace std;
@@ -47,6 +48,7 @@ using namespace std;
 #include "sequencer.h"
 #include "project.h"
 #include "circular_buffer.h"
+#include "circular_cv_buffer.h"
 
 /*---------------------------------------------------------------------------------*/
 /* MACROS / TYPES / CONST */
@@ -194,8 +196,11 @@ int main(int argc, char *argv[])
   /* create circular buffer */
   /*---------------------------------------*/
   circular_buffer<cv::Mat> imgBuff(CIRCULAR_BUFF_LEN);
+  circular_cv_buffer imgBuff2(CIRCULAR_BUFF_LEN);
   threadParams[Thread_e::DIFF_THREAD].pCBuff = &imgBuff;
   threadParams[Thread_e::ACQ_THREAD].pCBuff = &imgBuff;
+  threadParams[Thread_e::DIFF_THREAD].pCBuffcv = &imgBuff2;
+  threadParams[Thread_e::ACQ_THREAD].pCBuffcv = &imgBuff2;
 
   /*---------------------------------------*/
   /* create synchronization mechanizisms */

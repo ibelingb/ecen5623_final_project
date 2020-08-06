@@ -130,7 +130,7 @@ void *writeTask(void *arg)
     do {
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-      syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+//      syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
       if(mq_receive(writeQueue, (char *)&dummy, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
         if (errno == EAGAIN) {

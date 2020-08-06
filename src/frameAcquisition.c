@@ -136,7 +136,8 @@ void *acquisitionTask(void*arg)
 
       /* insert in circular buffer */
       pthread_mutex_lock(threadParams.pMutex);
-      threadParams.pCBuff->put(readImg);
+      threadParams.pCBuffcv->put(readImg);
+      //threadParams.pCBuff->put(readImg);
       pthread_mutex_unlock(threadParams.pMutex);
 
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
@@ -149,7 +150,8 @@ void *acquisitionTask(void*arg)
       prevReadTime.tv_sec = timeNow.tv_sec;
       prevReadTime.tv_nsec = timeNow.tv_nsec;
 #endif
-      if(threadParams.pCBuff->full()) {
+      if(threadParams.pCBuffcv->full()) {
+      //if(threadParams.pCBuff->full()) {
         syslog(LOG_WARNING, "%s CB is full!", __func__);
       }
     }
