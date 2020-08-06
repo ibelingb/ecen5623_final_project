@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <signal.h>
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
@@ -54,6 +55,14 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES */
+uint8_t runProcThread;
+uint8_t emptyFlag = 0;
+
+/*---------------------------------------------------------------------------------*/
+void shutdownProcThread(int sig) {
+  runProcThread = FALSE;
+  emptyFlag = TRUE;
+}
 
 /*---------------------------------------------------------------------------------*/
 void *processingTask(void *arg)
@@ -71,6 +80,9 @@ void *processingTask(void *arg)
     syslog(LOG_ERR, "invalid semaphore provided to %s", __func__);
     return NULL;
   }
+
+  /* Register shutdown signal handler */ 
+  signal(SIGNAL_KILL_PROC, shutdownProcThread);
 
   /* open handle to queue */
   mqd_t selectQueue = mq_open(threadParams.selectQueueName, O_RDONLY, 0666, NULL);
@@ -96,9 +108,10 @@ void *processingTask(void *arg)
 
   unsigned int prio;
   unsigned int timeoutCnt = 0;
+  runProcThread = TRUE;
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s (tid = %lu) started at %f", __func__, pthread_self(),  TIMESPEC_TO_MSEC(timeNow));
-  while(1) {
+  while(runProcThread == TRUE) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += PROC_THREAD_SEMA_TIMEOUT;
@@ -116,13 +129,8 @@ void *processingTask(void *arg)
 
     /* read oldest, highest priority msg from the message queue */
     imgDef_t dummy;
-    uint8_t emptyFlag = 0;
+    emptyFlag = 0;
     do {
-#if defined(TIMESTAMP_SYSLOG_OUTPUT)
-      clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-      syslog(LOG_INFO, "%s frame process start:,  %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
-#endif
-
       if(mq_receive(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, &prio) < 0) {
         if(errno != EAGAIN) {
           syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
@@ -133,6 +141,10 @@ void *processingTask(void *arg)
         if ((dummy.rows == 0) || (dummy.cols == 0)) {
           syslog(LOG_ERR, "%s received bad frame: rows = %d, cols = %d", __func__, dummy.rows, dummy.cols);
         } else {
+#if defined(TIMESTAMP_SYSLOG_OUTPUT)
+          clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+          syslog(LOG_INFO, "%s frame process start (msec):,  %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
+#endif
           Mat readImg(Size(dummy.cols, dummy.rows), dummy.type, dummy.data);
 
           if(threadParams.save_type == SaveType_e::SAVE_COLOR_IMAGE) {
@@ -194,10 +206,10 @@ void *processingTask(void *arg)
                 circle( readImg, center, radius, Scalar(255,0,0), 3, LINE_AA);
             }
           }
-
+#if defined(DISPLAY_FRAMES)
           imshow("readImg", readImg);
           waitKey(1);
-
+#endif
           /* Send frame to frameWrite via writeQueue */
           clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
           if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {
@@ -209,7 +221,7 @@ void *processingTask(void *arg)
           } else {
             clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-            syslog(LOG_INFO, "%s frame #%d inserted to writeQueue at:,  %.2f, ms", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(sendTime));
+            syslog(LOG_INFO, "%s frame #%d inserted to writeQueue at (msec):,  %.2f", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(sendTime));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
             syslog(LOG_INFO, "%s inserted frame#%d to writeQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, dummy.diffFrameNum,

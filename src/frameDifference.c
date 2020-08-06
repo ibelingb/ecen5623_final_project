@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <signal.h>
 
 /* opencv headers */
 #include <opencv2/core.hpp>     // Basic OpenCV structures (cv::Mat, Scalar)
@@ -55,6 +56,12 @@ using namespace std;
 
 /*---------------------------------------------------------------------------------*/
 /* GLOBAL VARIABLES */
+uint8_t runDiffThread;
+
+/*---------------------------------------------------------------------------------*/
+void shutdownDiffThread(int sig) {
+  runDiffThread = FALSE;
+}
 
 /*---------------------------------------------------------------------------------*/
 void *differenceTask(void *arg)
@@ -82,6 +89,9 @@ void *differenceTask(void *arg)
     return NULL;
   }
 
+  /* Register shutdown signal handler */ 
+  signal(SIGNAL_KILL_DIFF, shutdownDiffThread);
+
   /* open handle to queue */
   mqd_t selectQueue = mq_open(threadParams.selectQueueName,O_WRONLY, 0666, NULL);
   if(selectQueue == -1) {
@@ -105,7 +115,8 @@ void *differenceTask(void *arg)
   Mat newTimeFrame;
   unsigned int timeoutCnt = 0;
   uint8_t skipNextCnt = 0;
-	while(1) {
+  runDiffThread = TRUE;
+	while(runDiffThread == TRUE) {
     /* wait for semaphore */
     clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
     timeNow.tv_nsec += DIFF_THREAD_SEMA_TIMEOUT;
@@ -136,12 +147,12 @@ void *differenceTask(void *arg)
     }
 
     /* continue as long as there's frames in buffer */
-    while(!threadParams.pCBuffcv->empty())
+    while(threadParams.pCBuffcv->size() > FRAMES_TO_SKIP + 1)
     //while(!threadParams.pCBuff->empty())
     {
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-      syslog(LOG_INFO, "%s frame process start:, %.2f, ms", __func__, TIMESPEC_TO_MSEC(timeNow));
+      syslog(LOG_INFO, "%s frame process start (msec):, %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
 #endif
       pthread_mutex_lock(threadParams.pMutex);
       Mat readFrame;
@@ -167,7 +178,7 @@ void *differenceTask(void *arg)
        * frame to ensure the hands are stationary */
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       if(countNonZero(bw) > 100) {
-        skipNextCnt = 3;
+        skipNextCnt = FRAMES_TO_SKIP;
 
         while(skipNextCnt != 0) {
           //if(threadParams.pCBuff->empty()) {
@@ -228,7 +239,7 @@ void *differenceTask(void *arg)
 
           clock_gettime(SYSLOG_CLOCK_TYPE, &sendTime);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
-          syslog(LOG_INFO, "%s frame #%d inserted to selectQueue at:, %.2f, ms", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
+          syslog(LOG_INFO, "%s frame #%d inserted to selectQueue at (msec):, %.2f", __func__, cnt, TIMESPEC_TO_MSEC(sendTime));
 #endif
 #if defined(DT_SYSLOG_OUTPUT)
           syslog(LOG_INFO, "%s inserted frame#%d to selectQueue, dt since start: %.2f ms, dt since last frame sent: %.2f ms", __func__, cnt,

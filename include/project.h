@@ -31,14 +31,27 @@
 #define TIMESTAMP_SYSLOG_OUTPUT /* Used for jitter/drift data measurements */
 //#define DT_SYSLOG_OUTPUT /* Used for application debugging */
 
+//#define DISPLAY_FRAMES
+#define OUTPUT_VIDEO
+
 #define MAX_IMG_ROWS                  (480)
 #define MAX_IMG_COLS                  (640)
-#define MAX_FRAME_COUNT               (1800)
+#define MAX_FRAME_COUNT               (1801)
 #define TIME_TO_SKIP_MSEC             (1000)
-#define FRAMES_TO_SKIP                ((unsigned int)((TIME_TO_SKIP_MSEC * 24)/1000))
+#define FRAMES_TO_SKIP_AT_START       ((unsigned int)((TIME_TO_SKIP_MSEC * 24)/1000))
+
+#define FRAMES_TO_SKIP                (2)
 
 #define TIMESPEC_TO_MSEC(time)	      ((float)((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6)))
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
+
+#define TRUE                          (1)
+#define FALSE                         (0)
+
+#define SIGNAL_KILL_SEQ               (SIGRTMIN + 1)
+#define SIGNAL_KILL_ACQ               (SIGRTMIN + 2)
+#define SIGNAL_KILL_DIFF              (SIGRTMIN + 3)
+#define SIGNAL_KILL_PROC              (SIGRTMIN + 4)
 
 /* for queues */
 typedef struct {
@@ -98,6 +111,7 @@ typedef struct {
   unsigned int filter_enable;                 /* enable filtering */
   SaveType_e save_type;                       /* type of frame to pass through the pipeline */
   struct timespec programStartTime;           /* start time to make times more reasonable */
+  pthread_t *pTidSeqThread;                   /* TID of sequencer thread to allow signal tx */
 } threadParams_t;
 
 typedef struct {
@@ -105,7 +119,10 @@ typedef struct {
   sem_t *pDiffSema;                           /* Frame Difference semaphore */
   sem_t *pProcSema;                           /* Frame Processing semaphore */
   sem_t *pWriteSema;                          /* Frame Write semaphore */
-  sem_t *pSeqSema;                            /* Sequencer semaphore */
+  pthread_t tidAcqThread;                     /* Thread ID for Frame Acquire Service */
+  pthread_t tidDiffThread;                    /* Thread ID for Frame Diff Service */
+  pthread_t tidProcThread;                    /* Thread ID for Frame Proc Service */
+  pthread_t tidWriteThread;                   /* Thread ID for Frame Write Service */
 } seqThreadParams_t;
 
 #endif

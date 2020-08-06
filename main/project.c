@@ -73,6 +73,7 @@ const char *writeQueueName = "/write_mq";
 
 int main(int argc, char *argv[])
 {
+  pthread_t threads[TOTAL_THREADS];
   int i;
 
   /* starting logging; use cat /var/log/syslog | grep project
@@ -211,6 +212,9 @@ int main(int argc, char *argv[])
       syslog(LOG_ERR, "couldn't create semaphore");
       return -1;
     }
+
+    /* Set sequencer threadid */
+    threadParams[Thread_e::WRITE_THREAD].pTidSeqThread = &threads[Thread_e::SEQ_THREAD];
   }
 
   pthread_mutex_t cb_mutex;
@@ -244,7 +248,6 @@ int main(int argc, char *argv[])
   strcpy(threadParams[Thread_e::PROC_THREAD].selectQueueName, selectQueueName);
   strcpy(threadParams[Thread_e::PROC_THREAD].writeQueueName, writeQueueName);
   strcpy(threadParams[Thread_e::WRITE_THREAD].writeQueueName, writeQueueName);
-  pthread_t threads[TOTAL_THREADS];
 
   set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 2, 3);
   threadParams[Thread_e::ACQ_THREAD].pSema = &semas[Thread_e::ACQ_THREAD];
@@ -271,11 +274,14 @@ int main(int argc, char *argv[])
   }
 
   set_attr_policy(&thread_attr, &threadCpu, SCHED_FIFO, 1, 4);
-  seqThreadParams.pAcqSema   = &semas[Thread_e::ACQ_THREAD];
-  seqThreadParams.pDiffSema  = &semas[Thread_e::DIFF_THREAD];
-  seqThreadParams.pProcSema  = &semas[Thread_e::PROC_THREAD];
-  seqThreadParams.pWriteSema = &semas[Thread_e::WRITE_THREAD];
-  seqThreadParams.pSeqSema   = &semas[Thread_e::SEQ_THREAD]; // TODO - remove?
+  seqThreadParams.pAcqSema       = &semas[Thread_e::ACQ_THREAD];
+  seqThreadParams.pDiffSema      = &semas[Thread_e::DIFF_THREAD];
+  seqThreadParams.pProcSema      = &semas[Thread_e::PROC_THREAD];
+  seqThreadParams.pWriteSema     = &semas[Thread_e::WRITE_THREAD];
+  seqThreadParams.tidAcqThread   = threads[Thread_e::ACQ_THREAD];
+  seqThreadParams.tidDiffThread  = threads[Thread_e::DIFF_THREAD];
+  seqThreadParams.tidProcThread  = threads[Thread_e::PROC_THREAD];
+  seqThreadParams.tidWriteThread = threads[Thread_e::WRITE_THREAD];
   if(pthread_create(&threads[SEQ_THREAD], &thread_attr, sequencerTask, (void *)&seqThreadParams) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::SEQ_THREAD);
   }
