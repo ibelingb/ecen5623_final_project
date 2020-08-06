@@ -163,9 +163,10 @@ void *writeTask(void *arg)
           if(threadParams.save_type != SaveType_e::SAVE_COLOR_IMAGE) {
             cvtColor(receivedImg, receivedImg, COLOR_GRAY2RGB);
           }
+#if defined(OUTPUT_VIDEO)
           writer.write(receivedImg);
+#endif
 
-          
           clock_gettime(SYSLOG_CLOCK_TYPE, &saveTime);
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
           syslog(LOG_INFO, "%s frame #%d saved at (msec):, %.2f", __func__, dummy.diffFrameNum, TIMESPEC_TO_MSEC(saveTime));

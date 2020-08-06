@@ -206,10 +206,10 @@ void *processingTask(void *arg)
                 circle( readImg, center, radius, Scalar(255,0,0), 3, LINE_AA);
             }
           }
-
+#if defined(DISPLAY_FRAMES)
           imshow("readImg", readImg);
           waitKey(1);
-
+#endif
           /* Send frame to frameWrite via writeQueue */
           clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
           if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {

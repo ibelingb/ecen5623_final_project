@@ -27,8 +27,11 @@
 
 /* Define types of logging data captured - print raw timestamp and/or delta time from app start */
 /* Uncomment which logging type is desired */
-//#define TIMESTAMP_SYSLOG_OUTPUT /* Used for jitter/drift data measurements */
+#define TIMESTAMP_SYSLOG_OUTPUT /* Used for jitter/drift data measurements */
 //#define DT_SYSLOG_OUTPUT /* Used for application debugging */
+
+//#define DISPLAY_FRAMES
+#define OUTPUT_VIDEO
 
 #define MAX_IMG_ROWS                  (480)
 #define MAX_IMG_COLS                  (640)
