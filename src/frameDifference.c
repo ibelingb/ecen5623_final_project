@@ -103,7 +103,7 @@ void *differenceTask(void *arg)
   /* create filter kernel */
   Mat kern1D = getGaussianKernel(FILTER_SIZE, FILTER_SIGMA, CV_32F);
   
-  struct timespec timeNow, sendTime;
+  struct timespec timeNow, sendTime, prevDiffTime;
   #if defined(DT_SYSLOG_OUTPUT)
   struct timespec prevSendTime;
   #endif
@@ -174,10 +174,16 @@ void *differenceTask(void *arg)
       Mat bw;
       threshold(diffFrame, bw, 20, 255, THRESH_BINARY);
 
+      unsigned int pixelDiffCount = countNonZero(bw);
+      if(pixelDiffCount !=0) {
+	clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
+      	cout << "countNonZero(bw): " << pixelDiffCount  << " time since last non-zero: " << (int)CALC_DT_MSEC(timeNow, prevDiffTime) << endl;
+	prevDiffTime = timeNow;
+      }
       /* if a difference was found, take the next
        * frame to ensure the hands are stationary */
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
-      if(countNonZero(bw) > 100) {
+      if(pixelDiffCount > 100) {
         skipNextCnt = FRAMES_TO_SKIP;
 
         while(skipNextCnt != 0) {
