@@ -32,13 +32,13 @@
 //#define DT_SYSLOG_OUTPUT /* Used for application debugging */
 
 //#define DISPLAY_FRAMES
-#define OUTPUT_VIDEO
+//#define OUTPUT_VIDEO
 
 #define MAX_IMG_ROWS                  (480)
 #define MAX_IMG_COLS                  (640)
 #define MAX_FRAME_COUNT               (1800)
 #define TIME_TO_SKIP_MSEC             (1000)
-#define FRAMES_TO_SKIP_AT_START       ((unsigned int)((TIME_TO_SKIP_MSEC * 24)/1000))
+#define FRAMES_TO_SKIP_AT_START       ((unsigned int)((TIME_TO_SKIP_MSEC * 50)/1000))
 
 #define FRAMES_TO_SKIP                (5)
 
@@ -66,10 +66,10 @@ typedef struct {
 } imgDef_t;
 
 #define SELECT_QUEUE_MSG_SIZE         (sizeof(imgDef_t))
-#define SELECT_QUEUE_LENGTH           (13)
+#define SELECT_QUEUE_LENGTH           (30)
 #define WRITE_QUEUE_MSG_SIZE          (sizeof(cv::Mat))
 #define WRITE_QUEUE_LENGTH            (50)
-#define CIRCULAR_BUFF_LEN             (13)
+#define CIRCULAR_BUFF_LEN             (50)
 
 /* for synchronization */
 #define ACQ_THREAD_SEMA_TIMEOUT       (50e6)
