@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
   mq_write_attr.mq_flags = 0;
 
   /* allow write queue to block so writeTask just waits on messages */
-  mqd_t writeQueue = mq_open(writeQueueName, O_CREAT, S_IRWXU, &mq_write_attr);
+  mqd_t writeQueue = mq_open(writeQueueName, O_CREAT | O_NONBLOCK, S_IRWXU, &mq_write_attr);
   if(writeQueue == (mqd_t)ERROR) {
     syslog(LOG_ERR, "couldn't create queue");
     return -1;

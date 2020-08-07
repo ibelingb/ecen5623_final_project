@@ -93,7 +93,7 @@ void *differenceTask(void *arg)
   signal(SIGNAL_KILL_DIFF, shutdownDiffThread);
 
   /* open handle to queue */
-  mqd_t selectQueue = mq_open(threadParams.selectQueueName,O_WRONLY, 0666, NULL);
+  mqd_t selectQueue = mq_open(threadParams.selectQueueName,O_WRONLY | O_NONBLOCK, 0666, NULL);
   if(selectQueue == -1) {
     syslog(LOG_ERR, "%s couldn't open queue", __func__);
     cout << __func__<< " couldn't open queue" << endl;
@@ -234,8 +234,8 @@ void *differenceTask(void *arg)
         /* try to insert image but don't block if full
         * so that we loop around and just get the newest */
         clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
-        if(mq_timedsend(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {
-            if(errno == ETIMEDOUT) {
+        if(mq_send(selectQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio) != 0) {
+            if(errno == EAGAIN) {
               cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
             }
             free(dummy.data);

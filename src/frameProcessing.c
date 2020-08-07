@@ -85,7 +85,7 @@ void *processingTask(void *arg)
   signal(SIGNAL_KILL_PROC, shutdownProcThread);
 
   /* open handle to queue */
-  mqd_t selectQueue = mq_open(threadParams.selectQueueName, O_RDONLY, 0666, NULL);
+  mqd_t selectQueue = mq_open(threadParams.selectQueueName, O_RDONLY | O_NONBLOCK, 0666, NULL);
   if(selectQueue == -1) {
     syslog(LOG_ERR, "%s couldn't open queue", __func__);
     cout << __func__<< " couldn't open queue" << endl;
@@ -93,7 +93,7 @@ void *processingTask(void *arg)
   }
 
   /* open handle to queue */
-  mqd_t writeQueue = mq_open(threadParams.writeQueueName, O_WRONLY, 0666, NULL);
+  mqd_t writeQueue = mq_open(threadParams.writeQueueName, O_WRONLY | O_NONBLOCK, 0666, NULL);
   if(writeQueue == -1) {
     syslog(LOG_ERR, "%s couldn't open queue", __func__);
     cout << __func__<< " couldn't open queue" << endl;
@@ -212,8 +212,8 @@ void *processingTask(void *arg)
 #endif
           /* Send frame to frameWrite via writeQueue */
           clock_gettime(SEMA_CLOCK_TYPE, &timeNow);
-          if(mq_timedsend(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio, &timeNow) != 0) {
-            if(errno == ETIMEDOUT) {
+          if(mq_send(writeQueue, (char *)&dummy, SELECT_QUEUE_MSG_SIZE, prio) != 0) {
+            if(errno == EAGAIN) {
               cout << __func__ << " mq_timedsend(writeQueue, ...) TIMEOUT#" << timeoutCnt++ << endl;
             } 
             free(dummy.data);

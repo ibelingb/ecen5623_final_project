@@ -40,7 +40,7 @@
 #define TIME_TO_SKIP_MSEC             (1000)
 #define FRAMES_TO_SKIP_AT_START       ((unsigned int)((TIME_TO_SKIP_MSEC * 50)/1000))
 
-#define FRAMES_TO_SKIP                (5)
+#define FRAMES_TO_SKIP                (1)
 
 #define TIMESPEC_TO_MSEC(time)	      ((float)((((float)time.tv_sec) * 1.0e3) + (((float)time.tv_nsec) * 1.0e-6)))
 #define CALC_DT_MSEC(newest, oldest)  (TIMESPEC_TO_MSEC(newest) - TIMESPEC_TO_MSEC(oldest))
@@ -66,10 +66,10 @@ typedef struct {
 } imgDef_t;
 
 #define SELECT_QUEUE_MSG_SIZE         (sizeof(imgDef_t))
-#define SELECT_QUEUE_LENGTH           (30)
+#define SELECT_QUEUE_LENGTH           (300)
 #define WRITE_QUEUE_MSG_SIZE          (sizeof(cv::Mat))
-#define WRITE_QUEUE_LENGTH            (50)
-#define CIRCULAR_BUFF_LEN             (50)
+#define WRITE_QUEUE_LENGTH            (500)
+#define CIRCULAR_BUFF_LEN             (500)
 
 /* for synchronization */
 #define ACQ_THREAD_SEMA_TIMEOUT       (50e6)
