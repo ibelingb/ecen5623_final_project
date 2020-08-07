@@ -96,8 +96,10 @@ void shutdownApp(int sig) {
 
 /*------------------------------------------------------------------------*/
 /*
+ * Sequencer to trigger updates to semaphores of other service threads at the 
+ * specified rates based on a sub-rate of the base-rate.
  * 
- * 
+ * @param signal - Signal type received
  */
 void sequencer(int signal) {
 /* Used for capture sequencer jitter - comment out for data processing
