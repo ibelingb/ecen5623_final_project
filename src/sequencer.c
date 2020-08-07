@@ -8,8 +8,17 @@
  * Ubuntu 18.04 LTS and RPi 3B+
  ************************************************************************************
  *
- * @file frameWrite.c
- * @brief 
+ * @file sequencer.c
+ * @brief Sequencer service that drives execution of all other services via synchronized semaphores
+ * 
+ * The Sequencer acts as the executive dispatch service and provides a base rate frequency from 
+ * which all other threads are driven from. This is done by updating blocking semaphores to all 
+ * other service threads within the system at specified intervals. These dispatch intervals are 
+ * a substrate of the Sequencer’s base rate, which is set to a default value 120 Hz. 
+ * 
+ * This service is driven from the high frequency oscillator provided by the RPi3, checking a 
+ * comparator against the Interval Timer (IT) and sending an interrupt signal to the Sequencer 
+ * at the desired frequency.
  *
  ************************************************************************************
  * References and Resources:
@@ -37,24 +46,25 @@
 #include "project.h"
 
 /*------------------------------------------------------------------------*/
+/* MACROS */
 #define USEC_PER_MSEC (1000)
 #define NANOSEC_PER_MSEC (1000000)
 #define NANOSEC_PER_SEC (1000000000)
 
 #define SCHED_TYPE SCHED_FIFO
 
-#define SEQ_TIMER_INTERVAL_NSEC (8333333) // 120 Hz
+#define SEQ_TIMER_INTERVAL_NSEC (8333333) // 120 Hz base rate for sequencer
 
-#define ACQUIRE_FRAMES_EXEC_RATE_HZ (24)
-#define DIFFERENCE_FRAMES_EXEC_RATE_HZ (2)
-#define PROC_WRITE_FRAMES_EXEC_RATE_HZ (1)
-//#define WRITE_FRAMES_EXEC_RATE_HZ (1)
+#define ACQUIRE_FRAMES_EXEC_RATE_HZ (24) /* Freq to trigger AcquireFrames thread service */
+#define DIFFERENCE_FRAMES_EXEC_RATE_HZ (2) /* Freq to trigger DifferenceFrames thread service */
+#define PROC_WRITE_FRAMES_EXEC_RATE_HZ (1) /* Freq to trigger FrameProcessing and FrameWrite thread services */
 
 #define ACQUIRE_FRAMES_MOD_CALC (120 / ACQUIRE_FRAMES_EXEC_RATE_HZ)
 #define DIFFERENCE_FRAMES_MOD_CALC (120 / DIFFERENCE_FRAMES_EXEC_RATE_HZ)
 #define PROC_WRITE_FRAMES_MOD_CALC (120 / PROC_WRITE_FRAMES_EXEC_RATE_HZ)
 
 /*------------------------------------------------------------------------*/
+/* GLOBAL VARIABLES */
 static unsigned long long sequenceCount = 0;
 
 seqThreadParams_t sequencerParams;
@@ -65,6 +75,10 @@ timer_t seqTimer;
 /*------------------------------------------------------------------------*/
 /*** METHODS ***/
 /*------------------------------------------------------------------------*/
+/*
+ * Signal Handler method for app the shutdown after the desired number of frames has been received
+ * @param sig - received signal
+ */
 void shutdownApp(int sig) {
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "Sequecer - Shutdown Signal received, signaling all other threads to shutdown at:, %.2f", 
@@ -81,8 +95,12 @@ void shutdownApp(int sig) {
 }
 
 /*------------------------------------------------------------------------*/
-void sequencer(int signal) {
 /*
+ * 
+ * 
+ */
+void sequencer(int signal) {
+/* Used for capture sequencer jitter - comment out for data processing
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s cycle start (msec):, %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
@@ -105,14 +123,13 @@ void sequencer(int signal) {
 
   // Process frame images @ 1 Hz
   // Write Frames to memory @ 1 Hz
-  // Additionally check if max number of frames saved
   if((sequenceCount % (int)PROC_WRITE_FRAMES_MOD_CALC) == 0) {
     sem_post(sequencerParams.pProcSema);
     sem_post(sequencerParams.pWriteSema);
   }
 
 
-/*
+/* Used for capture sequencer jitter - comment out for data processing
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
   clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
   syslog(LOG_INFO, "%s cycle done (msec):, %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
@@ -121,6 +138,15 @@ void sequencer(int signal) {
 }
 
 /*------------------------------------------------------------------------*/
+/*
+ * Service started from main() to setup all necessary data types (semaphores),
+ * register the appShutdown signal handler, and initiate the timer which drives
+ * the sequencer base-rate task at the desired frequency. App blocks on the 
+ * appCompleteSemaphore until a signal is received from the writeFrame service 
+ * to indicate the max number of frames have been written to memory. 
+ * 
+ * @arg - void pointer for pthread arguments passed from main().
+ */
 void *sequencerTask(void *arg) {
   struct itimerspec itime = {{1, 0}, {1, 0}};
   struct itimerspec last_itime;
