@@ -63,7 +63,6 @@ using namespace std;
 void *writeTask(void *arg)
 {
   char filename[80];
-  uint8_t emptyFlag = 0;
   uint8_t runWriteProc = 1;
   unsigned int prio;
   imgDef_t dummy;
@@ -128,8 +127,6 @@ void *writeTask(void *arg)
     }
 
     /* Read Frame from writeQueue */
-    emptyFlag = 0;
-    do {
 #if defined(TIMESTAMP_SYSLOG_OUTPUT)
       clock_gettime(SYSLOG_CLOCK_TYPE, &timeNow);
       syslog(LOG_INFO, "%s frame process start (msec):, %.2f", __func__, TIMESPEC_TO_MSEC(timeNow));
@@ -137,7 +134,6 @@ void *writeTask(void *arg)
       if(mq_receive(writeQueue, (char *)&dummy, WRITE_QUEUE_MSG_SIZE, &prio) < 0) {
         if (errno == EAGAIN) {
           //syslog(LOG_INFO, "%s - No frame available from writeQueue", __func__);
-          emptyFlag = 1;
           continue;
         } else if(errno != EAGAIN) {
           syslog(LOG_ERR, "%s error with mq_receive, errno: %d [%s]", __func__, errno, strerror(errno));
@@ -183,7 +179,6 @@ void *writeTask(void *arg)
         if(dummy.diffFrameNum == MAX_FRAME_COUNT) {
           /* Break from while-loop */
           runWriteProc = FALSE;
-          emptyFlag = 1;
 
           /* Send signal to highest priority thread */
           pthread_kill(*(threadParams.pTidSeqThread), SIGNAL_KILL_SEQ);
@@ -192,7 +187,6 @@ void *writeTask(void *arg)
         /* free malloced data */
         free(dummy.data);
       }
-    } while(!emptyFlag);
 	}
 
 

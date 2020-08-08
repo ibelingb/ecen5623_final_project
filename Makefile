@@ -12,7 +12,7 @@
 #*****************************************************************************
 
 # General / default variables for all platforms / architectures
-CFLAGS = -Wall -g -O0 -Werror -pthread
+CFLAGS = -Wall -g -O3 -Werror -pthread
 CPPFLAGS = -MD -MP
 TARGET = project
 PLATFORM = UBUNTU

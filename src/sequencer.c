@@ -56,8 +56,8 @@
 #define SEQ_TIMER_INTERVAL_NSEC (8333333) // 120 Hz base rate for sequencer
 
 #define ACQUIRE_FRAMES_EXEC_RATE_HZ (24) /* Freq to trigger AcquireFrames thread service */
-#define DIFFERENCE_FRAMES_EXEC_RATE_HZ (2) /* Freq to trigger DifferenceFrames thread service */
-#define PROC_WRITE_FRAMES_EXEC_RATE_HZ (1) /* Freq to trigger FrameProcessing and FrameWrite thread services */
+#define DIFFERENCE_FRAMES_EXEC_RATE_HZ (20) /* Freq to trigger DifferenceFrames thread service */
+#define PROC_WRITE_FRAMES_EXEC_RATE_HZ (10) /* Freq to trigger FrameProcessing and FrameWrite thread services */
 
 #define ACQUIRE_FRAMES_MOD_CALC (120 / ACQUIRE_FRAMES_EXEC_RATE_HZ)
 #define DIFFERENCE_FRAMES_MOD_CALC (120 / DIFFERENCE_FRAMES_EXEC_RATE_HZ)

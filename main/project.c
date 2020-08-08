@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::PROC_THREAD);
   }
 
-  set_attr_policy(&thread_attr, &threadCpu, SCHED_RR, 5, 1);
+  set_attr_policy(&thread_attr, &threadCpu, SCHED_RR, 1, 0);
   threadParams[Thread_e::WRITE_THREAD].pSema = &semas[Thread_e::WRITE_THREAD];
   if(pthread_create(&threads[Thread_e::WRITE_THREAD], &thread_attr, writeTask, (void *)&threadParams[Thread_e::WRITE_THREAD]) != 0) {
     syslog(LOG_ERR, "couldn't create thread#%d", Thread_e::WRITE_THREAD);
@@ -366,8 +366,10 @@ int set_attr_policy(pthread_attr_t *attr, cpu_set_t *cpuSet, int policy, uint8_t
 
   param.sched_priority = sched_get_priority_max(policy) - priorityOffset;
 
-  CPU_SET(cpuCore, cpuSet);
-  rtnCode |= pthread_attr_setaffinity_np(attr, sizeof(cpu_set_t), cpuSet);
+  if(cpuCore > 0) {
+    CPU_SET(cpuCore, cpuSet);
+    rtnCode |= pthread_attr_setaffinity_np(attr, sizeof(cpu_set_t), cpuSet);
+  }
 
   rtnCode |= pthread_attr_setschedparam(attr, &param);
   if (rtnCode) {
